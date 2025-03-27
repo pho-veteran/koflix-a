@@ -22,6 +22,10 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  //TODO 1: Check if user is logged in, if not, redirect to login page
+
+  //TODO 2: If user have the right permissions, redirect to the dashboard, or redirect to warning page
+
   return (
     <html lang="en">
       <body
