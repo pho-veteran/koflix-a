@@ -96,7 +96,6 @@ const VerifyCodeForm: React.FC<VerifyCodeFormProps> = () => {
 
             const user = await verifyCode(values.code);
             if (user) {
-                toast.success("Phone verification successful");
                 router.push("/");
             } else {
                 setError("Invalid verification code. Please try again.");
@@ -127,18 +126,26 @@ const VerifyCodeForm: React.FC<VerifyCodeFormProps> = () => {
                                 <FormItem className="mx-auto">
                                     <FormLabel className="text-center block mb-2">Enter verification code</FormLabel>
                                     <FormControl>
-                                        <InputOTP
-                                            maxLength={6}
-                                            disabled={isLoading}
-                                            {...field}
-                                            render={({ slots }) => (
-                                                <InputOTPGroup>
-                                                    {slots.map((slot, index) => (
-                                                        <InputOTPSlot key={index} index={index} {...slot} />
-                                                    ))}
-                                                </InputOTPGroup>
-                                            )}
-                                        />
+                                        <div className="flex justify-center">
+                                            <InputOTP
+                                                maxLength={6}
+                                                disabled={isLoading}
+                                                {...field}
+                                                render={({ slots }) => (
+                                                    <InputOTPGroup>
+                                                        {slots.map((slot, index) => (
+                                                            <InputOTPSlot
+                                                                key={index}
+                                                                index={index}
+                                                                char={slot.char === null ? undefined : slot.char}
+                                                                hasFakeCaret={slot.hasFakeCaret}
+                                                                isActive={slot.isActive}
+                                                            />
+                                                        ))}
+                                                    </InputOTPGroup>
+                                                )}
+                                            />
+                                        </div>
                                     </FormControl>
                                     {error && (
                                         <p className="text-sm font-medium text-destructive mt-2 text-center">
