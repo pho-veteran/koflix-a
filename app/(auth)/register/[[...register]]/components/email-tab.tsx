@@ -21,7 +21,13 @@ import {
 // Email schema
 const emailSchema = z.object({
     email: z.string().email("Please enter a valid email address"),
-    password: z.string().min(8, "Password must be at least 8 characters"),
+    password: z
+        .string()
+        .min(8, "Password must be at least 8 characters long")
+        .regex(
+            /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
+            "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"
+        ),
     confirmPassword: z.string().min(8, "Password must be at least 8 characters"),
 }).refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",
@@ -37,7 +43,7 @@ interface EmailTabProps {
 
 const EmailTab: React.FC<EmailTabProps> = ({ isLoading, setIsLoading }) => {
     const router = useRouter();
-    
+
     // Email form
     const form = useForm<EmailFormValues>({
         resolver: zodResolver(emailSchema),
@@ -47,13 +53,13 @@ const EmailTab: React.FC<EmailTabProps> = ({ isLoading, setIsLoading }) => {
             confirmPassword: "",
         },
     });
-    
+
     // Handle email registration
     const handleEmailRegister = async (values: EmailFormValues) => {
         try {
             setIsLoading(true);
             const { email, password } = values;
-            
+
             const user = await signUp(email, password);
             if (user) {
                 router.push("/");
@@ -123,9 +129,9 @@ const EmailTab: React.FC<EmailTabProps> = ({ isLoading, setIsLoading }) => {
                     )}
                 />
 
-                <Button 
-                    type="submit" 
-                    className="w-full" 
+                <Button
+                    type="submit"
+                    className="w-full"
                     disabled={isLoading}
                 >
                     {isLoading ? "Registering..." : "Register with Email"}

@@ -22,8 +22,20 @@ import { PhoneInput } from "@/components/ui/phone-input";
 
 // Phone schema
 const phoneSchema = z.object({
-    phone: z.string().optional(),
-    password: z.string().min(8, "Password must be at least 8 characters"),
+    phone: z.string()
+        .min(1, "Phone number is required")
+        .refine((value) => {
+            return /^(\+?[0-9]{8,15})$/.test(value.replace(/[\s-]/g, ''));
+        }, {
+            message: "Please enter a valid phone number"
+        }),
+    password: z
+        .string()
+        .min(8, "Password must be at least 8 characters long")
+        .regex(
+            /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
+            "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"
+        ),
     confirmPassword: z.string().min(8, "Password must be at least 8 characters"),
 }).refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",
