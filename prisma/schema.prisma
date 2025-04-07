@@ -1,0 +1,131 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+// schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String         @id @map("_id") @db.ObjectId
+  emailOrPhone String?        @unique
+  name         String?
+  avatarUrl    String?
+  likedMovies  String[]       @db.ObjectId
+  watchHistory WatchHistory[]
+  comments     Comment[]
+  replies      Reply[]
+  preferences  String[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+}
+
+enum MovieType {
+  MOVIE
+  SERIES
+}
+
+model Genre {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  slug      String   @unique
+  movies    Movie[]  @relation(fields: [movieIds], references: [id])
+  movieIds  String[] @db.ObjectId
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Movie {
+  id           String         @id @default(auto()) @map("_id") @db.ObjectId
+  title        String
+  slug         String         @unique
+  description  String
+  type         MovieType
+  genres       Genre[]        @relation(fields: [genreIds], references: [id])
+  genreIds     String[]       @db.ObjectId
+  releaseYear  Int
+  duration     Int
+  posterUrl    String
+  thumbUrl     String
+  trailerUrl   String?
+  episodes     Episode[]
+  embeddings   Float[]
+  views        Int            @default(0)
+  rating       Float          @default(0)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  WatchHistory WatchHistory[]
+  Comment      Comment[]
+
+  @@index([title, releaseYear])
+}
+
+model Episode {
+  id            String         @id @default(auto()) @map("_id") @db.ObjectId
+  episodeNumber Int
+  title         String
+  slug          String
+  description   String
+  videoUrl      String
+  thumbnail     String
+  duration      Int
+  movie         Movie          @relation(fields: [movieId], references: [id])
+  movieId       String         @db.ObjectId
+  createdAt     DateTime       @default(now())
+  WatchHistory  WatchHistory[]
+  Comment       Comment[]
+
+  @@unique([movieId, episodeNumber])
+}
+
+model WatchHistory {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  user            User     @relation(fields: [userId], references: [id])
+  userId          String   @db.ObjectId
+  movie           Movie    @relation(fields: [movieId], references: [id])
+  movieId         String   @db.ObjectId
+  episode         Episode? @relation(fields: [episodeId], references: [id])
+  episodeId       String?  @db.ObjectId
+  progress        Float    @default(0)
+  durationWatched Int      @default(0)
+  watchedAt       DateTime @default(now())
+
+  @@index([userId, watchedAt])
+  @@index([movieId])
+}
+
+model Comment {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String   @db.ObjectId
+  movie     Movie?   @relation(fields: [movieId], references: [id])
+  movieId   String?  @db.ObjectId
+  episode   Episode? @relation(fields: [episodeId], references: [id])
+  episodeId String?  @db.ObjectId
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  replies   Reply[]
+
+  @@index([movieId])
+  @@index([episodeId])
+  @@index([userId])
+}
+
+model Reply {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  comment   Comment  @relation(fields: [commentId], references: [id])
+  commentId String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String   @db.ObjectId
+  content   String
+  createdAt DateTime @default(now())
+}
