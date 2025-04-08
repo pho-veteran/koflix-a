@@ -40,30 +40,23 @@ export const signUp = async (
 
         // Create session cookie via server API
         const idToken = await result.user.getIdToken();
-        
-        // Create user in database
-        try {
-            const response = await axios.post("/api/users", {
-                idToken,
-                name,
-                emailOrPhone: email,
-            });
-            
-            console.log("User created in database:", response.data);
-        } catch (dbError) {
-            console.error("Failed to create user in database:", dbError);
-            // Continue anyway since Firebase auth was successful
-        }
-        
+
         // Create session
         await axios.post("/api/auth/create-session", {
             idToken,
         });
 
+        // Create user in database
+        await axios.post("/api/users", {
+            idToken,
+            name,
+            emailOrPhone: email,
+        });
+
         return result.user;
     } catch (error) {
         const errorMessage = getAuthErrorMessage(error);
-        toast.error(errorMessage);
+        toast.error(errorMessage || "Sign up failed. Please try again.");
         console.error("Sign up error:", error);
         return null;
     }
@@ -117,31 +110,22 @@ export const signInWithGoogle = async (): Promise<User | null> => {
         // Create session cookie via server API
         const idToken = await result.user.getIdToken();
 
-        console.log("ID Token:", idToken);
-
-        // Create/update user in database
-        try {
-            const response = await axios.post("/api/users", {
-                idToken,
-                name: result.user.displayName,
-                emailOrPhone: result.user.email,
-            });
-            
-            console.log("User created/updated in database:", response.data);
-        } catch (dbError) {
-            console.error("Failed to create/update user in database:", dbError);
-            // Continue anyway since Firebase auth was successful
-        }
-        
         // Create session
         await axios.post("/api/auth/create-session", {
             idToken,
         });
 
+        // Create/update user in database
+        await axios.post("/api/users", {
+            idToken,
+            name: result.user.displayName,
+            emailOrPhone: result.user.email,
+        });
+
         return result.user;
     } catch (error) {
         const errorMessage = getAuthErrorMessage(error);
-        toast.error(errorMessage);
+        toast.error(errorMessage || "Google sign in failed. Please try again.");
         console.error("Google sign in error:", error);
         return null;
     }
@@ -293,24 +277,19 @@ export const verifyCode = async (code: string): Promise<User | null> => {
         // Create session cookie via server API
         const idToken = await result.user.getIdToken();
 
-        // Create user in database
-        try {
-            const response = await axios.post("/api/users", {
-                idToken,
-                name: name || "Phone User",
-                emailOrPhone: phoneNumber,
-            });
-            
-            console.log("User created in database:", response.data);
-        } catch (dbError) {
-            console.error("Failed to create user in database:", dbError);
-            // Continue anyway since Firebase auth was successful
-        }
-        
         // Create session
         await axios.post("/api/auth/create-session", {
             idToken,
         });
+
+        // Create user in database
+
+await axios.post("/api/users", {
+                idToken,
+                name: name || "Phone User",
+                emailOrPhone: phoneNumber,
+            });
+
 
         // Get stored password from localStorage (if it exists)
         const storedPassword = localStorage.getItem(

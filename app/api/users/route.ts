@@ -23,10 +23,7 @@ export async function POST(request: NextRequest) {
         const decodedToken = await auth.verifyIdToken(idToken);
         const uid = decodedToken.uid;
 
-        console.log("Info", uid, name, emailOrPhone);
-        console.log("Access")
-
-        // Check if user already exists in our database
+        // Check if user already exists
         let user = await prisma.user.findUnique({
             where: {
                 id: uid,
@@ -42,7 +39,6 @@ export async function POST(request: NextRequest) {
                 data: {
                     name: name || user.name,
                     emailOrPhone: emailOrPhone || user.emailOrPhone,
-                    // Update avatar URL if available in the token
                     avatarUrl: decodedToken.picture || user.avatarUrl,
                 },
             });
@@ -57,7 +53,7 @@ export async function POST(request: NextRequest) {
                         decodedToken.email ||
                         decodedToken.phone_number ||
                         null,
-                    role: "CUSTOMER", // Default role
+                    role: "CUSTOMER",
                     avatarUrl: decodedToken.picture || null,
                 },
             });
