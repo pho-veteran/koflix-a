@@ -15,6 +15,7 @@ import { auth } from "@/lib/firebase";
 import { getAuthErrorMessage } from "@/lib/auth-errors";
 import toast from "react-hot-toast";
 import { parsePhoneNumber, isValidPhoneNumber } from "libphonenumber-js";
+import axios from "axios";
 
 // Define the window global for RecaptchaVerifier
 declare global {
@@ -26,7 +27,8 @@ declare global {
 // Email/Password Sign Up
 export const signUp = async (
     email: string,
-    password: string
+    password: string,
+    name?: string
 ): Promise<User | null> => {
     try {
         const result = await createUserWithEmailAndPassword(
@@ -38,23 +40,25 @@ export const signUp = async (
 
         // Create session cookie via server API
         const idToken = await result.user.getIdToken();
-        const sessionResponse = await fetch("/api/auth/create-session", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ idToken }),
-        });
-
-        if (!sessionResponse.ok) {
-            console.error(
-                "Failed to create session:",
-                await sessionResponse.text()
-            );
-            toast.error(
-                "Session creation failed. Please try logging in again."
-            );
+        
+        // Create user in database
+        try {
+            const response = await axios.post("/api/users", {
+                idToken,
+                name,
+                emailOrPhone: email,
+            });
+            
+            console.log("User created in database:", response.data);
+        } catch (dbError) {
+            console.error("Failed to create user in database:", dbError);
+            // Continue anyway since Firebase auth was successful
         }
+        
+        // Create session
+        await axios.post("/api/auth/create-session", {
+            idToken,
+        });
 
         return result.user;
     } catch (error) {
@@ -112,23 +116,27 @@ export const signInWithGoogle = async (): Promise<User | null> => {
 
         // Create session cookie via server API
         const idToken = await result.user.getIdToken();
-        const sessionResponse = await fetch("/api/auth/create-session", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ idToken }),
-        });
 
-        if (!sessionResponse.ok) {
-            console.error(
-                "Failed to create session:",
-                await sessionResponse.text()
-            );
-            toast.error(
-                "Session creation failed. Please try logging in again."
-            );
+        console.log("ID Token:", idToken);
+
+        // Create/update user in database
+        try {
+            const response = await axios.post("/api/users", {
+                idToken,
+                name: result.user.displayName,
+                emailOrPhone: result.user.email,
+            });
+            
+            console.log("User created/updated in database:", response.data);
+        } catch (dbError) {
+            console.error("Failed to create/update user in database:", dbError);
+            // Continue anyway since Firebase auth was successful
         }
+        
+        // Create session
+        await axios.post("/api/auth/create-session", {
+            idToken,
+        });
 
         return result.user;
     } catch (error) {
@@ -267,6 +275,8 @@ export const sendVerificationCode = async (
 // Verify the code entered by user
 export const verifyCode = async (code: string): Promise<User | null> => {
     const verificationId = localStorage.getItem("phoneAuthVerificationId");
+    const phoneNumber = localStorage.getItem("phoneAuthPhoneNumber");
+    const name = localStorage.getItem("phoneRegistrationName");
 
     if (!verificationId) {
         toast.error("Verification ID is missing. Please request a new code.");
@@ -282,31 +292,35 @@ export const verifyCode = async (code: string): Promise<User | null> => {
 
         // Create session cookie via server API
         const idToken = await result.user.getIdToken();
-        const sessionResponse = await fetch("/api/auth/create-session", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ idToken }),
-        });
 
-        if (!sessionResponse.ok) {
-            console.error(
-                "Failed to create session:",
-                await sessionResponse.text()
-            );
-            toast.error(
-                "Session creation failed. Please try logging in again."
-            );
+        // Create user in database
+        try {
+            const response = await axios.post("/api/users", {
+                idToken,
+                name: name || "Phone User",
+                emailOrPhone: phoneNumber,
+            });
+            
+            console.log("User created in database:", response.data);
+        } catch (dbError) {
+            console.error("Failed to create user in database:", dbError);
+            // Continue anyway since Firebase auth was successful
         }
+        
+        // Create session
+        await axios.post("/api/auth/create-session", {
+            idToken,
+        });
 
         // Get stored password from localStorage (if it exists)
         const storedPassword = localStorage.getItem(
             "phoneRegistrationPassword"
         );
         if (storedPassword) {
-            // Update user record with additional info if needed
             localStorage.removeItem("phoneRegistrationPassword");
+        }
+        if (name) {
+            localStorage.removeItem("phoneRegistrationName");
         }
 
         toast.success("Phone verification successful");
@@ -341,6 +355,15 @@ export const verifyCode = async (code: string): Promise<User | null> => {
         }
 
         return null;
+    } finally {
+        // Clear recaptcha if it exists (in case of error)
+        if (window.recaptchaVerifier) {
+            try {
+                window.recaptchaVerifier.clear();
+            } catch (e) {
+                console.error("Error clearing recaptcha:", e);
+            }
+        }
     }
 };
 

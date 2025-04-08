@@ -22,6 +22,7 @@ import { PhoneInput } from "@/components/ui/phone-input";
 
 // Phone schema
 const phoneSchema = z.object({
+    name: z.string().min(2, "Name must be at least 2 characters"),
     phone: z.string()
         .min(1, "Phone number is required")
         .refine((value) => {
@@ -58,6 +59,7 @@ const PhoneTab: React.FC<PhoneTabProps> = ({ isLoading, setIsLoading }) => {
     const form = useForm<PhoneFormValues>({
         resolver: zodResolver(phoneSchema),
         defaultValues: {
+            name: "",
             phone: "",
             password: "",
             confirmPassword: "",
@@ -75,8 +77,9 @@ const PhoneTab: React.FC<PhoneTabProps> = ({ isLoading, setIsLoading }) => {
                 return;
             }
             
-            // Store password for after verification
+            // Store user info for after verification
             localStorage.setItem('phoneRegistrationPassword', values.password);
+            localStorage.setItem('phoneRegistrationName', values.name);
             
             const verificationId = await sendVerificationCode(phoneValue.toString());
             if (verificationId) {
@@ -93,6 +96,25 @@ const PhoneTab: React.FC<PhoneTabProps> = ({ isLoading, setIsLoading }) => {
     return (
         <Form {...form}>
             <form onSubmit={form.handleSubmit(handlePhoneRegister)} className="space-y-6">
+                <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Name</FormLabel>
+                            <FormControl>
+                                <Input
+                                    {...field}
+                                    type="text"
+                                    placeholder="Your name..."
+                                    disabled={isLoading}
+                                />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                
                 <FormField
                     control={form.control}
                     name="phone"

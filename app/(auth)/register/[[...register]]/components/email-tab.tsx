@@ -20,6 +20,7 @@ import {
 
 // Email schema
 const emailSchema = z.object({
+    name: z.string().min(2, "Name must be at least 2 characters"),
     email: z.string().email("Please enter a valid email address"),
     password: z
         .string()
@@ -48,6 +49,7 @@ const EmailTab: React.FC<EmailTabProps> = ({ isLoading, setIsLoading }) => {
     const form = useForm<EmailFormValues>({
         resolver: zodResolver(emailSchema),
         defaultValues: {
+            name: "",
             email: "",
             password: "",
             confirmPassword: "",
@@ -58,9 +60,9 @@ const EmailTab: React.FC<EmailTabProps> = ({ isLoading, setIsLoading }) => {
     const handleEmailRegister = async (values: EmailFormValues) => {
         try {
             setIsLoading(true);
-            const { email, password } = values;
+            const { name, email, password } = values;
 
-            const user = await signUp(email, password);
+            const user = await signUp(email, password, name);
             if (user) {
                 router.push("/");
             }
@@ -72,6 +74,25 @@ const EmailTab: React.FC<EmailTabProps> = ({ isLoading, setIsLoading }) => {
     return (
         <Form {...form}>
             <form onSubmit={form.handleSubmit(handleEmailRegister)} className="space-y-6">
+                <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Name</FormLabel>
+                            <FormControl>
+                                <Input
+                                    {...field}
+                                    type="text"
+                                    placeholder="Your name..."
+                                    disabled={isLoading}
+                                />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+
                 <FormField
                     control={form.control}
                     name="email"

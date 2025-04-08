@@ -38,9 +38,6 @@ export function initAdmin() {
                 credential: cert(serviceAccount),
             });
 
-            console.log(
-                "Firebase Admin initialized successfully with service account file"
-            );
         } catch (error) {
             console.error("Error initializing Firebase Admin:", error);
             throw error;
