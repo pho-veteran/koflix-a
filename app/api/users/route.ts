@@ -1,11 +1,61 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "firebase-admin/auth";
 import { initAdmin } from "@/lib/firebase-admin";
+import { verifySessionCookie } from "@/lib/server-auth";
 
 import prisma from "@/lib/prisma";
 
 // Initialize Firebase Admin
 initAdmin();
+
+export async function GET() {
+    try {
+        // Verify the session cookie
+        const { authenticated, decodedClaims } = await verifySessionCookie();
+        
+        if (!authenticated || !decodedClaims) {
+            return NextResponse.json(
+                { error: "Unauthorized" },
+                { status: 401 }
+            );
+        }
+        
+        const uid = decodedClaims.uid;
+        
+        // Fetch user data from database
+        const user = await prisma.user.findUnique({
+            where: {
+                id: uid,
+            },
+            select: {
+                id: true,
+                name: true,
+                emailOrPhone: true,
+                role: true,
+                avatarUrl: true,
+            },
+        });
+        
+        if (!user) {
+            return NextResponse.json(
+                { error: "User not found" },
+                { status: 404 }
+            );
+        }
+        
+        return NextResponse.json({ user });
+        
+    } catch (error) {
+        console.error("Error fetching user data:", error);
+        return NextResponse.json(
+            {
+                error: "Failed to fetch user data",
+                details: error instanceof Error ? error.message : String(error),
+            },
+            { status: 500 }
+        );
+    }
+}
 
 export async function POST(request: NextRequest) {
     try {

@@ -50,6 +50,16 @@ model Genre {
   updatedAt DateTime @updatedAt
 }
 
+model Country {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  slug      String   @unique
+  movies    Movie[]  @relation(fields: [movieIds], references: [id])
+  movieIds  String[] @db.ObjectId
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Movie {
   id           String         @id @default(auto()) @map("_id") @db.ObjectId
   title        String
@@ -58,6 +68,8 @@ model Movie {
   type         MovieType
   genres       Genre[]        @relation(fields: [genreIds], references: [id])
   genreIds     String[]       @db.ObjectId
+  countries    Country[]      @relation(fields: [countryIds], references: [id])
+  countryIds   String[]       @db.ObjectId
   releaseYear  Int
   duration     Int
   posterUrl    String

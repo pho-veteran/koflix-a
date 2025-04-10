@@ -1,36 +1,38 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { ToastProvider } from "../providers/toast-provider";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+const geistSans = localFont({
+    src: '../public/fonts/geist/Geist-VariableFont_wght.ttf',
+    variable: '--font-geist-sans',
+    display: 'swap',
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+const geistMono = localFont({
+    src: '../public/fonts/geist-mono/GeistMono-VariableFont_wght.ttf',
+    variable: '--font-geist-mono',
+    display: 'swap',
 });
 
 export const metadata: Metadata = {
-  title: "Koflix - Stream Movies & TV Shows",
-  description: "Stream the latest movies and TV shows on Koflix",
+    title: "Koflix - Stream Movies & TV Shows",
+    description: "Stream the latest movies and TV shows on Koflix",
 };
 
 export default function RootLayout({
-  children,
+    children,
 }: Readonly<{
-  children: React.ReactNode;
+    children: React.ReactNode;
 }>) {
-  return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <ToastProvider />
-        {children}
-      </body>
-    </html>
-  );
+    return (
+        <html lang="en">
+            <body
+                className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+            >
+                <ToastProvider />
+                {children}
+            </body>
+        </html>
+    );
 }
