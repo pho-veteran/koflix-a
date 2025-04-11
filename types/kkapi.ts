@@ -3,14 +3,6 @@
  * Base URL: https://phimapi.com/
  */
 
-// "pagination": {
-//     "totalItems": 22191,
-//     "totalItemsPerPage": 24,
-//     "currentPage": 1,
-//     "totalPages": 925,
-//     "updateToday": 17
-//   }
-
 export interface KKApiPagination {
     totalItems: number;
     totalItemsPerPage: number;

@@ -61,44 +61,72 @@ model Country {
 }
 
 model Movie {
-  id           String         @id @default(auto()) @map("_id") @db.ObjectId
-  title        String
-  slug         String         @unique
-  description  String
-  type         MovieType
-  genres       Genre[]        @relation(fields: [genreIds], references: [id])
-  genreIds     String[]       @db.ObjectId
-  countries    Country[]      @relation(fields: [countryIds], references: [id])
-  countryIds   String[]       @db.ObjectId
-  releaseYear  Int
-  duration     Int
-  posterUrl    String
-  thumbUrl     String
-  trailerUrl   String?
-  episodes     Episode[]
-  embeddings   Float[]
-  views        Int            @default(0)
-  rating       Float          @default(0)
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
+  name            String
+  slug            String    @unique
+  origin_name     String
+  type            MovieType
+  genres          Genre[]   @relation(fields: [genreIds], references: [id])
+  genreIds        String[]  @db.ObjectId
+  countries       Country[] @relation(fields: [countryIds], references: [id])
+  countryIds      String[]  @db.ObjectId
+  year            Int
+  time            String
+  poster_url      String
+  thumb_url       String
+  trailer_url     String?
+  quality         String?
+  lang            String?
+  sub_docquyen    Boolean   @default(false)
+  episode_current String?
+  episode_total   String?
+  status          String?
+  is_copyright    Boolean   @default(false)
+  chieurap        Boolean   @default(false)
+
+  tmdb_id      String?
+  tmdb_type    String?
+  tmdb_season  Int?
+  vote_average Float?
+  vote_count   Int?
+
+  imdb_id String?
+
+  actor    String[] @default([])
+  director String[] @default([])
+
+  content String
+
+  notify    String?
+  showtimes String?
+
+  episodes   Episode[]
+  embeddings Float[]
+
+  view   Int   @default(0)
+  rating Float @default(0)
+
+  created  DateTime @default(now())
+  modified DateTime @updatedAt
+
   WatchHistory WatchHistory[]
   Comment      Comment[]
 
-  @@index([title, releaseYear])
+  @@index([name, year])
 }
 
 model Episode {
-  id            String         @id @default(auto()) @map("_id") @db.ObjectId
+  id            String          @id @default(auto()) @map("_id") @db.ObjectId
   episodeNumber Int
-  title         String
+  name          String
   slug          String
-  description   String
-  videoUrl      String
-  thumbnail     String
-  duration      Int
-  movie         Movie          @relation(fields: [movieId], references: [id])
-  movieId       String         @db.ObjectId
-  createdAt     DateTime       @default(now())
+  content       String?
+  thumbnail     String?
+  duration      Int?
+  movie         Movie           @relation(fields: [movieId], references: [id])
+  movieId       String          @db.ObjectId
+  servers       EpisodeServer[]
+  createdAt     DateTime        @default(now())
   WatchHistory  WatchHistory[]
   Comment       Comment[]
 
@@ -108,7 +136,7 @@ model Episode {
 model WatchHistory {
   id              String   @id @default(auto()) @map("_id") @db.ObjectId
   user            User     @relation(fields: [userId], references: [id])
-  userId          String   
+  userId          String
   movie           Movie    @relation(fields: [movieId], references: [id])
   movieId         String   @db.ObjectId
   episode         Episode? @relation(fields: [episodeId], references: [id])
@@ -124,7 +152,7 @@ model WatchHistory {
 model Comment {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   user      User     @relation(fields: [userId], references: [id])
-  userId    String   
+  userId    String
   movie     Movie?   @relation(fields: [movieId], references: [id])
   movieId   String?  @db.ObjectId
   episode   Episode? @relation(fields: [episodeId], references: [id])
@@ -144,7 +172,21 @@ model Reply {
   comment   Comment  @relation(fields: [commentId], references: [id])
   commentId String   @db.ObjectId
   user      User     @relation(fields: [userId], references: [id])
-  userId    String   
+  userId    String
   content   String
   createdAt DateTime @default(now())
+}
+
+model EpisodeServer {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  server_name String
+  episode     Episode  @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  episodeId   String   @db.ObjectId
+  filename    String?
+  link_embed  String
+  link_m3u8   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([episodeId])
 }

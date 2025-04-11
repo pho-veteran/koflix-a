@@ -233,7 +233,7 @@ export const KKApiClient = ({ initialMovies = [] }: KKApiClientProps) => {
             </div>
             
             {/* Series */}
-            <div className="p-4 md:p-6 border-b md:border-r flex items-center gap-3 lg:border-b-0 ">
+            <div className="p-4 md:p-6 border-b lg:border-r flex items-center gap-3 lg:border-b-0 ">
               <div className="bg-blue-500/10 p-2 rounded-full">
                 <Layers className="h-5 w-5 text-blue-500" />
               </div>
