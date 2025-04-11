@@ -100,5 +100,5 @@ export interface KKApiMoviesResponse {
  */
 export interface KKApiSingleMovieResponse {
     status: boolean;
-    movie: KKApiMovie[];
+    movie: KKApiMovie;
 }

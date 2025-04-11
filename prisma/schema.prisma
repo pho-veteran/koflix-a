@@ -35,9 +35,13 @@ model User {
   updatedAt    DateTime       @updatedAt
 }
 
-enum MovieType {
-  MOVIE
-  SERIES
+model MovieType {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  slug      String   @unique
+  movies    Movie[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Genre {
@@ -65,7 +69,8 @@ model Movie {
   name            String
   slug            String    @unique
   origin_name     String
-  type            MovieType
+  type            MovieType @relation(fields: [typeId], references: [id])
+  typeId          String    @db.ObjectId
   genres          Genre[]   @relation(fields: [genreIds], references: [id])
   genreIds        String[]  @db.ObjectId
   countries       Country[] @relation(fields: [countryIds], references: [id])

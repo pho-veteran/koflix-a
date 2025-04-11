@@ -15,6 +15,7 @@ interface ModalProps {
     isOpen: boolean;
     onClose: () => void;
     children?: React.ReactNode;
+    className?: string;
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -23,6 +24,7 @@ export const Modal: React.FC<ModalProps> = ({
     isOpen,
     onClose,
     children,
+    className,
 }) => {
     // Handle escape key and backdrop clicks correctly
     const handleOpenChange = (open: boolean) => {
@@ -34,7 +36,7 @@ export const Modal: React.FC<ModalProps> = ({
     // Key to force remount when closed and reopened
     return (
         <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-            <DialogContent onInteractOutside={onClose} onEscapeKeyDown={onClose}>
+            <DialogContent onInteractOutside={onClose} onEscapeKeyDown={onClose} className={`${className}`}>
                 {(title || description) && (
                     <DialogHeader>
                         {title && <DialogTitle>{title}</DialogTitle>}

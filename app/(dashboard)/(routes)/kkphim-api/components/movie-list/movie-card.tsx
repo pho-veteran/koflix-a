@@ -12,6 +12,22 @@ interface MovieCardProps {
     onToggleSelection: (movieId: string) => void;
 }
 
+// Helper function to get display name for movie type
+const getMovieTypeDisplay = (type: string): string => {
+    switch (type) {
+        case 'series':
+            return 'Series';
+        case 'single':
+            return 'Movie';
+        case 'tvshows':
+            return 'TV Show';
+        case 'hoathinh':
+            return 'Anime';
+        default:
+            return type;
+    }
+};
+
 export const MovieCard = ({
     movie,
     isSelected,
@@ -67,9 +83,9 @@ export const MovieCard = ({
                     {/* Bottom-right badges: Type and Episode */}
                     <div className="absolute bottom-2 left-2 flex flex-col items-start gap-1">
                         <Badge variant="outline" className="bg-black/70 text-white border-0">
-                            {movie.type === 'series' ? 'Series' : 'Movie'}
+                            {getMovieTypeDisplay(movie.type)}
                         </Badge>
-                        {movie.type === 'series' && movie.episode_current && (
+                        {(movie.type === 'series' || movie.type === 'tvshows' || movie.type === 'hoathinh') && movie.episode_current && (
                             <Badge variant="outline" className="bg-black/70 text-white border-0">
                                 EP {movie.episode_current}
                             </Badge>

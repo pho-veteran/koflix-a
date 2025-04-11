@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import axios from "axios"
 import {
     Command,
     LifeBuoy,
@@ -8,7 +9,8 @@ import {
     Film,
     Globe,
     Tags,
-    Users
+    Users,
+    FileVideo2
 } from "lucide-react"
 import { useState, useEffect } from "react"
 
@@ -68,6 +70,11 @@ const data = {
             icon: Globe,
         },
         {
+            name: "Movie Types",
+            url: "/movie-types",
+            icon: FileVideo2,
+        },
+        {
             name: "Movies",
             url: "/movies",
             icon: Film,
@@ -95,23 +102,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         async function fetchUserData() {
             if (firebaseUser) {
                 try {
-                    const response = await fetch('/api/users');
-                    if (response.ok) {
-                        const data = await response.json();
-                        setUserData({
-                            name: data.user.name,
-                            emailOrPhone: data.user.emailOrPhone || "",
-                            avatarUrl: data.user.avatarUrl || "/blank-avatar.svg",
-                            role: data.user.role
-                        });
-                    } else {
-                        // Fallback to Firebase user data if API fails
-                        setUserData({
-                            name: firebaseUser.displayName || "User",
-                            emailOrPhone: firebaseUser.email || firebaseUser.phoneNumber || "",
-                            avatarUrl: firebaseUser.photoURL || "/blank-avatar.svg"
-                        });
-                    }
+                    const response = await axios.get('/api/users');
+                    setUserData({
+                        name: response.data.user.name,
+                        emailOrPhone: response.data.user.emailOrPhone || "",
+                        avatarUrl: response.data.user.avatarUrl || "/blank-avatar.svg",
+                        role: response.data.user.role
+                    });
                 } catch (error) {
                     console.error("Error fetching user data:", error);
                     // Fallback to Firebase user data
