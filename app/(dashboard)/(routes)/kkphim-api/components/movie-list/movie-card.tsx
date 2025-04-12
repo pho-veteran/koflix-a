@@ -6,27 +6,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import Image from "next/image";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 
+import { getMovieTypeDisplay } from "../utils/movie-helpers";
+
 interface MovieCardProps {
     movie: KKApiMovieBase;
     isSelected: boolean;
     onToggleSelection: (movieId: string) => void;
 }
-
-// Helper function to get display name for movie type
-const getMovieTypeDisplay = (type: string): string => {
-    switch (type) {
-        case 'series':
-            return 'Series';
-        case 'single':
-            return 'Movie';
-        case 'tvshows':
-            return 'TV Show';
-        case 'hoathinh':
-            return 'Anime';
-        default:
-            return type;
-    }
-};
 
 export const MovieCard = ({
     movie,
@@ -80,7 +66,7 @@ export const MovieCard = ({
                         )}
                     </div>
 
-                    {/* Bottom-right badges: Type and Episode */}
+                    {/* Bottom-left badges: Type and Episode */}
                     <div className="absolute bottom-2 left-2 flex flex-col items-start gap-1">
                         <Badge variant="outline" className="bg-black/70 text-white border-0">
                             {getMovieTypeDisplay(movie.type)}

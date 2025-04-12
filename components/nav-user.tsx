@@ -31,6 +31,7 @@ import {
 
 import { signOut } from "@/lib/auth";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react"
 
 export function NavUser({
     user,
@@ -43,8 +44,13 @@ export function NavUser({
     },
     isLoading?: boolean
 }) {
+    const [isMounted, setIsMounted] = useState(false)
     const { isMobile } = useSidebar()
     const router = useRouter()
+
+    useEffect(() => {
+        setIsMounted(true)
+    }, [])
 
     const handleSignOut = async () => {
         try {
@@ -57,6 +63,8 @@ export function NavUser({
             console.error("Error signing out:", error);
         }
     };
+
+    if (!isMounted) return null
 
     return (
         <SidebarMenu>

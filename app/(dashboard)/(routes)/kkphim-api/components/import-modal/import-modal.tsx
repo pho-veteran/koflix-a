@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { FileDown } from "lucide-react";
-import { KKApiMovieBase, KKApiMovie } from "@/types/kkapi";
+import { KKApiMovieBase, KKApiMovie, KKApiEpisode } from "@/types/kkapi";
 import { getMovieDetail } from "@/actions/get-movie-detail";
 import axios from "axios";
 import toast from "react-hot-toast";
@@ -15,6 +15,7 @@ import toast from "react-hot-toast";
 import { StatusSummary } from "./status-summary";
 import { MovieTypeFilters } from "./movie-type-filters";
 import { ImportMovieCard } from "./import-movie-card";
+import { formatImportMoviesArray } from "@/types/typeUtils";
 
 interface ImportModalProps {
   isOpen: boolean;
@@ -26,6 +27,7 @@ interface ImportStatus {
   [key: string]: {
     loading: boolean;
     detailedMovie?: KKApiMovie;
+    episodes?: KKApiEpisode[];
     error?: string;
     exists?: boolean;
   };
@@ -36,8 +38,6 @@ export const ImportModal = ({ isOpen, onClose, selectedMovies }: ImportModalProp
   const [activeTab, setActiveTab] = useState<string>("all");
   const [isCheckingExistence, setIsCheckingExistence] = useState(false);
   const fetchingRef = useRef<boolean>(false);
-  
-  // Use a ref to track pending requests via their slugs
   const pendingFetchesRef = useRef<Set<string>>(new Set());
   
   // Count movies by type
@@ -157,6 +157,7 @@ export const ImportModal = ({ isOpen, onClose, selectedMovies }: ImportModalProp
           [movie._id]: {
             loading: false,
             detailedMovie: result.movie,
+            episodes: result.episodes,
             // Only set error if it's actually present
             ...(result.error ? { error: result.error } : {})
           }
@@ -206,18 +207,71 @@ export const ImportModal = ({ isOpen, onClose, selectedMovies }: ImportModalProp
     onClose();
   };
 
-  const handleImport = () => {
-    // Get all successfully loaded movies
-    const moviesToImport = Object.entries(importStatus)
-      .filter(([, status]) => status.detailedMovie && !status.loading && !status.exists && !status.error)
-      .map(([, status]) => status.detailedMovie!)
-      .filter(Boolean); // Additional safeguard to ensure no undefined values
+  const handleImport = async () => {
+    // Get all successfully loaded movies with their episodes
+    const moviesWithEpisodes = Object.entries(importStatus)
+      .filter(([, status]) => 
+        status.detailedMovie && 
+        status.episodes && 
+        !status.loading && 
+        !status.exists && 
+        !status.error
+      )
+      .map(([, status]) => ({
+        movie: status.detailedMovie!,
+        episodes: status.episodes!
+      }))
+      .filter(item => Boolean(item.movie));
     
-    if (moviesToImport.length > 0) {
-      // TODO: Implement actual import logic
-      toast.success(`Importing ${moviesToImport.length} movies`);
-      console.log("Movies to import:", moviesToImport);
-      handleClose();
+    if (moviesWithEpisodes.length > 0) {
+      // Format data for import
+      const importData = formatImportMoviesArray(
+        moviesWithEpisodes.map(item => item.movie),
+        moviesWithEpisodes.map(item => ({ 
+          movieSlug: item.movie.slug, 
+          episodes: item.episodes 
+        }))
+      );
+      
+      // Show loading toast
+      const loadingToast = toast.loading(`Importing ${moviesWithEpisodes.length} movies...`);
+      
+      try {
+        // Send import data to API
+        const response = await axios.post('/api/movies/import', importData);
+        
+        // Handle successful response
+        const results = response.data.results;
+        
+        toast.dismiss(loadingToast);
+        toast.success(
+          `Successfully imported ${results.movies.succeeded} movies, ` +
+          `${results.episodes.succeeded} episodes, and ` +
+          `${results.episodeServers.succeeded} servers.`
+        );
+        
+        // Close modal after successful import
+        handleClose();
+        
+        // If there were any failures, show a warning
+        if (results.movies.failed > 0 || results.episodes.failed > 0 || results.episodeServers.failed > 0) {
+          toast.error(
+            `Failed to import ${results.movies.failed} movies, ` +
+            `${results.episodes.failed} episodes, and ` +
+            `${results.episodeServers.failed} servers.`
+          );
+        }
+      } catch (error) {
+        // Handle errors
+        toast.dismiss(loadingToast);
+        
+        console.error("Import error:", error);
+        toast.error(
+          error instanceof Error 
+            ? `Import failed: ${error.message}` 
+            : "Import failed: An unexpected error occurred"
+        );
+      }
     } else {
       toast.error("No movies to import. Please try again.");
     }

@@ -1,19 +1,21 @@
 "use server";
 
 import axios from "axios";
-import { KKApiSingleMovieResponse, KKApiMovie } from "@/types/kkapi";
+import { KKApiSingleMovieResponse, KKApiMovie, KKApiEpisode } from "@/types/kkapi";
 
 /**
  * Fetches detailed information for a specific movie from the KKPhim API
  * @param slug The movie's slug identifier
  * @param signal Optional AbortSignal for cancellation
- * @returns Detailed movie information or error
+ * @returns Complete movie response including episodes or error
  */
 export async function getMovieDetail(
     slug: string,
     signal?: AbortSignal
 ): Promise<{
     movie?: KKApiMovie;
+    episodes?: KKApiEpisode[];
+    status?: boolean;
     error?: string;
 }> {
     try {
@@ -25,7 +27,7 @@ export async function getMovieDetail(
 
         const response = await axios.get<KKApiSingleMovieResponse>(
             `https://phimapi.com/phim/${sanitizedSlug}`,
-            { signal } // 👈 support for aborting
+            { signal }
         );
 
         if (!response.data.movie) {
@@ -33,7 +35,9 @@ export async function getMovieDetail(
         }
 
         return {
-            movie: response.data.movie
+            movie: response.data.movie,
+            episodes: response.data.episodes,
+            status: response.data.status
         };
     } catch (error: unknown) {
         if (axios.isCancel(error)) {

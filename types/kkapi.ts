@@ -23,13 +23,17 @@ export interface KKApiCountry {
     slug: string;
 }
 
-export interface KKApiEpisode {
-    id: string;
+export interface KKApiServerEpisode {
     name: string;
     slug: string;
     filename: string;
     link_embed: string;
     link_m3u8: string;
+}
+
+export interface KKApiEpisode {
+    server_name: string;
+    server_data: KKApiServerEpisode[];
 }
 
 export interface KKApiTmdb {
@@ -78,10 +82,6 @@ export interface KKApiMovie extends KKApiMovieBase {
     view: number;
     actor: string[];
     director: string[];
-    episodes: {
-        server_name: string;
-        server_data: KKApiEpisode[];
-    }[];
 }
 
 /**
@@ -101,4 +101,23 @@ export interface KKApiMoviesResponse {
 export interface KKApiSingleMovieResponse {
     status: boolean;
     movie: KKApiMovie;
+    episodes: KKApiEpisode[];
+}
+
+export interface KKMovieImportPayload {
+    movies: KKApiMovie[];
+    episodes: {
+        name: string;
+        slug: string;
+        movieId: string;
+    }[];
+    episodeServers: {
+        server_name: string;
+        filename: string;
+        link_embed: string;
+        link_m3u8: string;
+        //Attributes for mapping
+        movieId: string;
+        slug: string;
+    }[];
 }

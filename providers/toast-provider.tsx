@@ -6,7 +6,7 @@ import { CheckCircle2, XCircle } from 'lucide-react';
 export const ToastProvider = () => {
     return (
         <Toaster
-            position="bottom-right"
+            position="top-right"
             reverseOrder={false}
             gutter={8}
             toastOptions={{
