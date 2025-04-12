@@ -8,6 +8,8 @@ import { Separator } from "@/components/ui/separator";
 import { FileDown } from "lucide-react";
 import { KKApiMovieBase, KKApiMovie } from "@/types/kkapi";
 import { getMovieDetail } from "@/actions/get-movie-detail";
+import axios from "axios";
+import toast from "react-hot-toast";
 
 // Import sub-components
 import { StatusSummary } from "./status-summary";
@@ -25,12 +27,14 @@ interface ImportStatus {
     loading: boolean;
     detailedMovie?: KKApiMovie;
     error?: string;
+    exists?: boolean;
   };
 }
 
 export const ImportModal = ({ isOpen, onClose, selectedMovies }: ImportModalProps) => {
   const [importStatus, setImportStatus] = useState<ImportStatus>({});
   const [activeTab, setActiveTab] = useState<string>("all");
+  const [isCheckingExistence, setIsCheckingExistence] = useState(false);
   const fetchingRef = useRef<boolean>(false);
   
   // Use a ref to track pending requests via their slugs
@@ -54,31 +58,77 @@ export const ImportModal = ({ isOpen, onClose, selectedMovies }: ImportModalProp
     });
 
   // Status counts
-  const loadedCount = Object.values(importStatus).filter(status => !status.loading && !status.error).length;
+  const loadedCount = Object.values(importStatus).filter(status => !status.loading && !status.error && !status.exists).length;
   const errorCount = Object.values(importStatus).filter(status => status.error).length;
+  const existingCount = Object.values(importStatus).filter(status => status.exists).length;
   const loadingCount = Object.values(importStatus).filter(status => status.loading).length;
+
+  // Check if movies already exist in the database
+  const checkExistingMovies = useCallback(async (movies: KKApiMovieBase[]) => {
+    if (!movies.length) return {};
+    
+    setIsCheckingExistence(true);
+    
+    try {
+      // Extract all slugs
+      const slugs = movies.map(movie => movie.slug);
+      
+      // Call API to check which movies already exist
+      const response = await axios.post('/api/movies/check-import', { slugs });
+      const { existingSlugs } = response.data;
+      
+      // Create initial status with existing flag for already imported movies
+      const initialStatus: ImportStatus = {};
+      movies.forEach(movie => {
+        const exists = existingSlugs.includes(movie.slug);
+        initialStatus[movie._id] = {
+          loading: !exists, // Only set to loading if it doesn't exist
+          exists: exists
+        };
+      });
+      
+      return initialStatus;
+    } catch (error) {
+      console.error("Error checking existing movies:", error);
+      toast.error("Failed to check for existing movies");
+      
+      // Return default status (all loading)
+      return movies.reduce<ImportStatus>((acc, movie) => {
+        acc[movie._id] = { loading: true };
+        return acc;
+      }, {});
+    } finally {
+      setIsCheckingExistence(false);
+    }
+  }, []);
 
   // Handle loading movies via API
   const fetchMovies = useCallback(async (movies: KKApiMovieBase[]) => {
     // Mark as fetching
     fetchingRef.current = true;
     
-    // Setup initial loading state
-    const initialStatus = movies.reduce<ImportStatus>((acc, movie) => {
-      acc[movie._id] = { loading: true };
-      return acc;
-    }, {});
-    
+    // First, check which movies already exist
+    const initialStatus = await checkExistingMovies(movies);
     setImportStatus(initialStatus);
     
+    // Filter out movies that already exist
+    const moviesToFetch = movies.filter(movie => 
+      !initialStatus[movie._id]?.exists
+    );
+    
+    // If all movies already exist, no need to fetch details
+    if (moviesToFetch.length === 0) {
+      return;
+    }
+    
     // Track which movies we're fetching
-    pendingFetchesRef.current = new Set(movies.map(m => m.slug));
+    pendingFetchesRef.current = new Set(moviesToFetch.map(m => m.slug));
     
     // Process movies with staggered timing
     let delay = 0;
     const delayIncrement = 100; // ms between requests
     
-    for (const movie of movies) {
+    for (const movie of moviesToFetch) {
       // Skip if we've already started closing
       if (!fetchingRef.current) break;
       
@@ -129,7 +179,7 @@ export const ImportModal = ({ isOpen, onClose, selectedMovies }: ImportModalProp
         console.error("Error fetching movie details:", error);
       }
     }
-  }, []);
+  }, [checkExistingMovies]);
 
   // Start fetching when the modal opens
   useEffect(() => {
@@ -159,18 +209,17 @@ export const ImportModal = ({ isOpen, onClose, selectedMovies }: ImportModalProp
   const handleImport = () => {
     // Get all successfully loaded movies
     const moviesToImport = Object.entries(importStatus)
-      .filter(([, status]) => status.detailedMovie && !status.loading)
+      .filter(([, status]) => status.detailedMovie && !status.loading && !status.exists && !status.error)
       .map(([, status]) => status.detailedMovie!)
       .filter(Boolean); // Additional safeguard to ensure no undefined values
-    console.log("Original status:", importStatus);
-    console.log("Ready to import movies:", moviesToImport);
     
     if (moviesToImport.length > 0) {
       // TODO: Implement actual import logic
-      alert(`Importing ${moviesToImport.length} movies`);
+      toast.success(`Importing ${moviesToImport.length} movies`);
+      console.log("Movies to import:", moviesToImport);
       handleClose();
     } else {
-      alert("No movies to import. Please try again.");
+      toast.error("No movies to import. Please try again.");
     }
   };
 
@@ -189,6 +238,8 @@ export const ImportModal = ({ isOpen, onClose, selectedMovies }: ImportModalProp
           loadingCount={loadingCount}
           loadedCount={loadedCount}
           errorCount={errorCount}
+          existingCount={existingCount}
+          isCheckingExistence={isCheckingExistence}
         />
 
         {/* Movie type filter tabs */}
@@ -217,13 +268,13 @@ export const ImportModal = ({ isOpen, onClose, selectedMovies }: ImportModalProp
           <Button
             variant="outline"
             onClick={handleClose}
-            disabled={loadingCount > 0}
+            disabled={isCheckingExistence || loadingCount > 0}
           >
             Cancel
           </Button>
           <Button
             onClick={handleImport}
-            disabled={loadingCount > 0 || loadedCount === 0}
+            disabled={isCheckingExistence || loadingCount > 0 || loadedCount === 0}
             className="gap-1"
           >
             <FileDown className="h-4 w-4" />

@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { CheckCircle2, AlertCircle, Loader2, Info } from "lucide-react";
 import { KKApiMovieBase, KKApiMovie } from "@/types/kkapi";
 import { getMovieTypeIcon } from "../utils/movie-helpers";
 
@@ -13,12 +13,46 @@ interface ImportMovieCardProps {
     loading: boolean;
     detailedMovie?: KKApiMovie;
     error?: string;
+    exists?: boolean;
   };
 }
 
 export function ImportMovieCard({ movie, status }: ImportMovieCardProps) {
+  // Determine status badge content
+  let statusBadge = null;
+
+  if (status.exists) {
+    statusBadge = (
+      <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-800 mb-1.5">
+        <Info className="h-3 w-3" />
+        Already exists
+      </Badge>
+    );
+  } else if (status.error) {
+    statusBadge = (
+      <Badge variant="outline" className="border-red-200 bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400 dark:border-red-800 mb-1.5">
+        <AlertCircle className="h-3 w-3" />
+        Error
+      </Badge>
+    );
+  } else if (!status.loading && status.detailedMovie) {
+    statusBadge = (
+      <Badge variant="outline" className="border-green-200 bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400 dark:border-green-800 mb-1.5">
+        <CheckCircle2 className="h-3 w-3" />
+        Ready
+      </Badge>
+    );
+  } else if (status.loading) {
+    statusBadge = (
+      <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-700 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-800 mb-1.5">
+        <Loader2 className="h-3 w-3 animate-spin" />
+        Loading
+      </Badge>
+    );
+  }
+
   return (
-    <Card className="p-0 overflow-hidden">
+    <Card className={`p-0 overflow-hidden relative ${status.exists ? 'border-amber-200 dark:border-amber-800/40' : status.error ? 'border-red-200 dark:border-red-800/40' : (!status.loading && status.detailedMovie) ? 'border-green-200 dark:border-green-800/40' : ''}`}>
       <div className="flex">
         {/* Poster thumbnail column */}
         <div className="relative shrink-0">
@@ -40,6 +74,8 @@ export function ImportMovieCard({ movie, status }: ImportMovieCardProps) {
               <div title={status.error}>
                 <AlertCircle className="h-4 w-4 text-red-400" />
               </div>
+            ) : status.exists ? (
+              <Info className="h-4 w-4 text-amber-400" />
             ) : (
               <CheckCircle2 className="h-4 w-4 text-green-400" />
             )}
@@ -57,24 +93,33 @@ export function ImportMovieCard({ movie, status }: ImportMovieCardProps) {
         <CardContent className="flex-1 py-3 px-4 flex flex-col justify-between min-w-0">
           {/* Upper section */}
           <div>
-            {/* Title row with year badge */}
+            {/* Title row */}
             <div className="flex items-start justify-between gap-2">
-              <h4 className="font-medium text-sm leading-tight line-clamp-2">
-                {movie.name}
-              </h4>
-              {movie.year && (
-                <Badge variant="outline" className="text-xs shrink-0 ml-auto">
-                  {movie.year}
-                </Badge>
-              )}
-            </div>
+              <div className="space-y-1">
+                <h4 className="font-medium text-sm leading-tight line-clamp-2">
+                  {movie.name}
+                </h4>
+                {/* Original title */}
+                {movie.origin_name && (
+                  <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                    {movie.origin_name}
+                  </p>
+                )}
+              </div>
 
-            {/* Original title */}
-            {movie.origin_name && (
-              <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                {movie.origin_name}
-              </p>
-            )}
+              {/* Status and year badges column */}
+              <div className="flex flex-col items-end ">
+                {/* Status badge - above */}
+                {statusBadge}
+
+                {/* Year badge - below */}
+                {movie.year && (
+                  <Badge variant="outline" className="text-xs">
+                    {movie.year}
+                  </Badge>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Bottom section */}
@@ -115,6 +160,13 @@ export function ImportMovieCard({ movie, status }: ImportMovieCardProps) {
               {/* Language */}
               {movie.lang && (
                 <span>{movie.lang}</span>
+              )}
+
+              {/* Display error message if present */}
+              {status.error && (
+                <span className="text-red-500 ml-auto" title={status.error}>
+                  {status.error.length > 30 ? `${status.error.substring(0, 30)}...` : status.error}
+                </span>
               )}
             </div>
           </div>
