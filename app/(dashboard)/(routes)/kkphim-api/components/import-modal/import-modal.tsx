@@ -36,11 +36,10 @@ interface ImportStatus {
 export const ImportModal = ({ isOpen, onClose, selectedMovies }: ImportModalProps) => {
   const [importStatus, setImportStatus] = useState<ImportStatus>({});
   const [activeTab, setActiveTab] = useState<string>("all");
-  const [isCheckingExistence, setIsCheckingExistence] = useState(false);
+  const [isWaiting, setIsWaiting] = useState(false);
   const fetchingRef = useRef<boolean>(false);
   const pendingFetchesRef = useRef<Set<string>>(new Set());
   
-  // Count movies by type
   const typeCounts = {
     all: selectedMovies.length,
     series: selectedMovies.filter(m => m.type === 'series').length,
@@ -49,7 +48,6 @@ export const ImportModal = ({ isOpen, onClose, selectedMovies }: ImportModalProp
     anime: selectedMovies.filter(m => m.type === 'hoathinh').length
   };
 
-  // Filter movies by selected type
   const filteredMovies = activeTab === 'all'
     ? selectedMovies
     : selectedMovies.filter(movie => {
@@ -57,17 +55,15 @@ export const ImportModal = ({ isOpen, onClose, selectedMovies }: ImportModalProp
       return movie.type === activeTab;
     });
 
-  // Status counts
   const loadedCount = Object.values(importStatus).filter(status => !status.loading && !status.error && !status.exists).length;
   const errorCount = Object.values(importStatus).filter(status => status.error).length;
   const existingCount = Object.values(importStatus).filter(status => status.exists).length;
   const loadingCount = Object.values(importStatus).filter(status => status.loading).length;
 
-  // Check if movies already exist in the database
   const checkExistingMovies = useCallback(async (movies: KKApiMovieBase[]) => {
     if (!movies.length) return {};
     
-    setIsCheckingExistence(true);
+    setIsWaiting(true);
     
     try {
       // Extract all slugs
@@ -98,7 +94,7 @@ export const ImportModal = ({ isOpen, onClose, selectedMovies }: ImportModalProp
         return acc;
       }, {});
     } finally {
-      setIsCheckingExistence(false);
+      setIsWaiting(false);
     }
   }, []);
 
@@ -188,7 +184,7 @@ export const ImportModal = ({ isOpen, onClose, selectedMovies }: ImportModalProp
       fetchMovies(selectedMovies);
     }
     
-    // Cleanup function - abort any pending fetches
+    // Cleanup function 
     return () => {
       fetchingRef.current = false;
       pendingFetchesRef.current.clear();
@@ -208,7 +204,6 @@ export const ImportModal = ({ isOpen, onClose, selectedMovies }: ImportModalProp
   };
 
   const handleImport = async () => {
-    // Get all successfully loaded movies with their episodes
     const moviesWithEpisodes = Object.entries(importStatus)
       .filter(([, status]) => 
         status.detailedMovie && 
@@ -233,10 +228,10 @@ export const ImportModal = ({ isOpen, onClose, selectedMovies }: ImportModalProp
         }))
       );
       
-      // Show loading toast
       const loadingToast = toast.loading(`Importing ${moviesWithEpisodes.length} movies...`);
       
       try {
+        setIsWaiting(true);
         // Send import data to API
         const response = await axios.post('/api/movies/import', importData);
         
@@ -250,10 +245,9 @@ export const ImportModal = ({ isOpen, onClose, selectedMovies }: ImportModalProp
           `${results.episodeServers.succeeded} servers.`
         );
         
-        // Close modal after successful import
         handleClose();
         
-        // If there were any failures, show a warning
+        // Failure summary
         if (results.movies.failed > 0 || results.episodes.failed > 0 || results.episodeServers.failed > 0) {
           toast.error(
             `Failed to import ${results.movies.failed} movies, ` +
@@ -262,7 +256,6 @@ export const ImportModal = ({ isOpen, onClose, selectedMovies }: ImportModalProp
           );
         }
       } catch (error) {
-        // Handle errors
         toast.dismiss(loadingToast);
         
         console.error("Import error:", error);
@@ -271,11 +264,13 @@ export const ImportModal = ({ isOpen, onClose, selectedMovies }: ImportModalProp
             ? `Import failed: ${error.message}` 
             : "Import failed: An unexpected error occurred"
         );
+      } finally {
+        setIsWaiting(false);
       }
     } else {
       toast.error("No movies to import. Please try again.");
     }
-  };
+  };    
 
   return (
     <Modal
@@ -293,7 +288,7 @@ export const ImportModal = ({ isOpen, onClose, selectedMovies }: ImportModalProp
           loadedCount={loadedCount}
           errorCount={errorCount}
           existingCount={existingCount}
-          isCheckingExistence={isCheckingExistence}
+          isWaiting={isWaiting}
         />
 
         {/* Movie type filter tabs */}
@@ -322,13 +317,13 @@ export const ImportModal = ({ isOpen, onClose, selectedMovies }: ImportModalProp
           <Button
             variant="outline"
             onClick={handleClose}
-            disabled={isCheckingExistence || loadingCount > 0}
+            disabled={isWaiting || loadingCount > 0}
           >
             Cancel
           </Button>
           <Button
             onClick={handleImport}
-            disabled={isCheckingExistence || loadingCount > 0 || loadedCount === 0}
+            disabled={isWaiting || loadingCount > 0 || loadedCount === 0}
             className="gap-1"
           >
             <FileDown className="h-4 w-4" />

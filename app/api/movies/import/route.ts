@@ -73,7 +73,6 @@ async function processMovie(movie: KKApiMovie) {
       content: movie.content,
       notify: movie.notify,
       showtimes: movie.showtimes,
-      view: movie.view
     }
   });
   

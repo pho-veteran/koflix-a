@@ -8,13 +8,18 @@ const GenresPage = async () => {
         orderBy: {
             createdAt: "desc",
         },
+        include: {
+            _count: {
+                select: { movies: true },
+            },
+        },
     });
 
     const formattedGenres = genres.map((item) => ({
         id: item.id,
         name: item.name,
         slug: item.slug,
-        movieCount: item.movieIds.length,
+        movieCount: item._count.movies,
         createdAt: format(item.createdAt, "MMMM do, yyyy"),
     }));
 

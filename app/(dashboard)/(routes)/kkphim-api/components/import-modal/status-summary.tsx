@@ -9,7 +9,7 @@ interface StatusSummaryProps {
   loadedCount: number;
   errorCount: number;
   existingCount: number;
-  isCheckingExistence?: boolean;
+  isWaiting?: boolean;
 }
 
 export function StatusSummary({
@@ -18,14 +18,14 @@ export function StatusSummary({
   loadedCount,
   errorCount,
   existingCount,
-  isCheckingExistence = false
+  isWaiting = false
 }: StatusSummaryProps) {
   return (
     <div className="flex items-center gap-2 flex-wrap">
-      {isCheckingExistence ? (
+      {isWaiting ? (
         <Badge variant="secondary" className="animate-pulse">
           <Loader2 className="h-3 w-3 animate-spin" />
-          Checking database...
+          Contact movies database...
         </Badge>
       ) : (
         <>

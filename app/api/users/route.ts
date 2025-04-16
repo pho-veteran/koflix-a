@@ -5,12 +5,10 @@ import { verifySessionCookie } from "@/lib/server-auth";
 
 import prisma from "@/lib/prisma";
 
-// Initialize Firebase Admin
 initAdmin();
 
 export async function GET() {
     try {
-        // Verify the session cookie
         const { authenticated, decodedClaims } = await verifySessionCookie();
         
         if (!authenticated || !decodedClaims) {

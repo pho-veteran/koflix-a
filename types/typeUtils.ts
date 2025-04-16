@@ -1,4 +1,4 @@
-import { KKApiMovie, KKApiEpisode, KKMovieImportPayload } from "./kkapi";
+import { KKApiMovie, KKApiEpisode, KKApiServerEpisode, KKMovieImportPayload } from "./kkapi";
 
 interface EpisodeMapping {
   movieSlug: string;
@@ -6,7 +6,7 @@ interface EpisodeMapping {
 }
 
 export function formatImportMoviesArray(
-  movies: KKApiMovie[], 
+  movies: KKApiMovie[],
   episodesMappings: EpisodeMapping[] = []
 ): KKMovieImportPayload {
   const result: KKMovieImportPayload = {
@@ -15,39 +15,54 @@ export function formatImportMoviesArray(
     episodeServers: []
   };
 
-  // Process episodes if provided
+  const addedEpisodes = new Set<string>();
+
   episodesMappings.forEach(mapping => {
     const movie = movies.find(m => m.slug === mapping.movieSlug);
     if (!movie) return;
 
+    const episodesGroupedBySlug = new Map<string, { name: string; servers: { server_name: string; data: KKApiServerEpisode }[] }>();
+
+    // First pass: Collect and group all server data by episode slug
     mapping.episodes.forEach(serverGroup => {
-      // Create episode entry (one per episode name)
-      const episodeNames = new Set(serverGroup.server_data.map(ep => ep.name));
-      
-      episodeNames.forEach(episodeName => {
-        const episodeServers = serverGroup.server_data.filter(ep => ep.name === episodeName);
-        if (!episodeServers.length) return;
-        
-        // Get the slug from the first server entry
-        const episodeSlug = episodeServers[0].slug;
-        
-        // Add episode to result
+      serverGroup.server_data.forEach(serverData => {
+        const episodeSlug = serverData.slug;
+        const episodeName = serverData.name;
+
+        if (!episodesGroupedBySlug.has(episodeSlug)) {
+          episodesGroupedBySlug.set(episodeSlug, { name: episodeName, servers: [] });
+        }
+
+        // Add the server details under the correct episode slug
+        episodesGroupedBySlug.get(episodeSlug)!.servers.push({
+          server_name: serverGroup.server_name,
+          data: serverData
+        });
+      });
+    });
+
+    // Second pass: Populate the result arrays based on the grouped data
+    episodesGroupedBySlug.forEach((episodeData, episodeSlug) => {
+      const uniqueEpisodeKey = `${movie._id}:${episodeSlug}`;
+
+      // Add the unique episode entry if it hasn't been added yet
+      if (!addedEpisodes.has(uniqueEpisodeKey)) {
         result.episodes.push({
-          name: episodeName,
+          name: episodeData.name,
           slug: episodeSlug,
           movieId: movie._id
         });
-        
-        // Add episode servers
-        episodeServers.forEach(server => {
-          result.episodeServers.push({
-            server_name: serverGroup.server_name,
-            filename: server.filename,
-            link_embed: server.link_embed,
-            link_m3u8: server.link_m3u8,
-            movieId: movie._id,
-            slug: episodeSlug
-          });
+        addedEpisodes.add(uniqueEpisodeKey);
+      }
+
+      episodeData.servers.forEach(serverInfo => {
+        result.episodeServers.push({
+          server_name: serverInfo.server_name,
+          filename: serverInfo.data.filename,
+          link_embed: serverInfo.data.link_embed,
+          link_m3u8: serverInfo.data.link_m3u8,
+          movieId: movie._id,
+          slug: episodeSlug
         });
       });
     });
