@@ -130,7 +130,7 @@ model Episode {
   id            String          @id @default(auto()) @map("_id") @db.ObjectId
   name          String
   slug          String
-  movie         Movie           @relation(fields: [movieId], references: [id])
+  movie         Movie           @relation(fields: [movieId], references: [id], onDelete: Cascade)
   movieId       String          @db.ObjectId
   servers       EpisodeServer[]
   createdAt     DateTime        @default(now())
@@ -142,11 +142,11 @@ model Episode {
 
 model WatchHistory {
   id              String   @id @default(auto()) @map("_id") @db.ObjectId
-  user            User     @relation(fields: [userId], references: [id])
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId          String
-  movie           Movie    @relation(fields: [movieId], references: [id])
+  movie           Movie    @relation(fields: [movieId], references: [id], onDelete: Cascade)
   movieId         String   @db.ObjectId
-  episode         Episode? @relation(fields: [episodeId], references: [id])
+  episode         Episode? @relation(fields: [episodeId], references: [id], onDelete: Cascade)
   episodeId       String?  @db.ObjectId
   progress        Float    @default(0)
   durationWatched Int      @default(0)
@@ -158,16 +158,18 @@ model WatchHistory {
 
 model Comment {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade) 
   userId    String
-  movie     Movie?   @relation(fields: [movieId], references: [id])
-  movieId   String?  @db.ObjectId
-  episode   Episode? @relation(fields: [episodeId], references: [id])
-  episodeId String?  @db.ObjectId
+  movie     Movie?   @relation(fields: [movieId], references: [id], onDelete: Cascade) 
+  movieId   String?  @db.ObjectId 
+  episode   Episode? @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  episodeId String?  @db.ObjectId 
+
   content   String
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  replies   Reply[]
+  updatedAt DateTime @updatedAt 
+
+  replies   Reply[] 
 
   @@index([movieId])
   @@index([episodeId])
@@ -176,12 +178,17 @@ model Comment {
 
 model Reply {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  comment   Comment  @relation(fields: [commentId], references: [id])
-  commentId String   @db.ObjectId
-  user      User     @relation(fields: [userId], references: [id])
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade) 
+  commentId String   @db.ObjectId 
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade) 
   userId    String
   content   String
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt 
+
+  @@index([commentId])
+  @@index([userId])
 }
 
 model EpisodeServer {
@@ -207,9 +214,9 @@ enum InteractionType {
 
 model UserInteraction {
   id              String          @id @default(auto()) @map("_id") @db.ObjectId
-  user            User            @relation(fields: [userId], references: [id])
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId          String          
-  movie           Movie           @relation(fields: [movieId], references: [id])
+  movie           Movie           @relation(fields: [movieId], references: [id], onDelete: Cascade)
   movieId         String          @db.ObjectId
   interactionType InteractionType
   rating          Int?

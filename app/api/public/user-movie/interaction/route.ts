@@ -15,7 +15,6 @@ export async function POST(request: NextRequest) {
         const body: InteractionRequestBody = await request.json();
         const { idToken, movieId, interactionType, rating } = body;
 
-        // Validate required fields
         if (!idToken || !movieId || !interactionType) {
             return NextResponse.json(
                 { error: "Missing required fields: idToken, movieId, interactionType" },
@@ -46,7 +45,6 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Rating should only be provided for RATE interactionType" }, { status: 400 });
         }
 
-        // Check if userId and movieId exist in the database
         const [userExists, movieExists] = await Promise.all([
             prisma.user.findUnique({ where: { id: userId }, select: { id: true } }),
             prisma.movie.findUnique({ where: { id: movieId }, select: { id: true } })
@@ -54,27 +52,24 @@ export async function POST(request: NextRequest) {
         if (!userExists) return NextResponse.json({ error: `User with ID ${userId} not found` }, { status: 404 });
         if (!movieExists) return NextResponse.json({ error: `Movie with ID ${movieId} not found` }, { status: 404 });
 
-        // Perform the interaction in a transaction
         let finalInteractionResult: UserInteraction | null = null;
 
         await prisma.$transaction(async (tx) => {
             const movieUpdateData: Prisma.MovieUpdateInput = {};
 
-            // --- Handle VIEW ---
             if (interactionType === InteractionType.VIEW) {
                 finalInteractionResult = await tx.userInteraction.create({
                     data: { userId, movieId, interactionType }
                 });
                 movieUpdateData.view = { increment: 1 };
-            }
-            // --- Handle LIKE / DISLIKE ---
-            else if (interactionType === InteractionType.LIKE || interactionType === InteractionType.DISLIKE) {
+            } else if (interactionType === InteractionType.LIKE || interactionType === InteractionType.DISLIKE) {
                 const oppositeType = interactionType === InteractionType.LIKE ? InteractionType.DISLIKE : InteractionType.LIKE;
 
                 const existingSameInteraction = await tx.userInteraction.findFirst({
                     where: { userId, movieId, interactionType }
                 });
 
+                // If the same interaction exists, remove it (toggle off)
                 if (existingSameInteraction) {
                     await tx.userInteraction.delete({ where: { id: existingSameInteraction.id } });
                     if (interactionType === InteractionType.LIKE) {
@@ -82,11 +77,13 @@ export async function POST(request: NextRequest) {
                     } else {
                         movieUpdateData.dislikeCount = { decrement: 1 };
                     }
+                // If the same interaction doesn't exist, check for the opposite
                 } else {
                     const existingOppositeInteraction = await tx.userInteraction.findFirst({
                         where: { userId, movieId, interactionType: oppositeType }
                     });
 
+                    // If the opposite interaction exists, remove it first
                     if (existingOppositeInteraction) {
                         await tx.userInteraction.delete({ where: { id: existingOppositeInteraction.id } });
                         if (oppositeType === InteractionType.LIKE) {
@@ -96,6 +93,7 @@ export async function POST(request: NextRequest) {
                         }
                     }
 
+                    // Create the new interaction (toggle on)
                     finalInteractionResult = await tx.userInteraction.create({
                         data: { userId, movieId, interactionType }
                     });
@@ -105,13 +103,12 @@ export async function POST(request: NextRequest) {
                         movieUpdateData.dislikeCount = { increment: 1 };
                     }
                 }
-            }
-            // --- Handle RATE ---
-            else if (interactionType === InteractionType.RATE && rating !== undefined) {
+            } else if (interactionType === InteractionType.RATE && rating !== undefined) {
                 const existingRating = await tx.userInteraction.findFirst({
                     where: { userId, movieId, interactionType: InteractionType.RATE }
                 });
 
+                // Update existing rating or create a new one
                 if (existingRating) {
                     finalInteractionResult = await tx.userInteraction.update({
                         where: { id: existingRating.id },
@@ -123,7 +120,7 @@ export async function POST(request: NextRequest) {
                     });
                 }
                 
-                // Recalculate average rating AFTER the interaction is saved
+                // Recalculate movie's average rating and count after change
                 const newRatingAggregation = await tx.userInteraction.aggregate({
                     _avg: { rating: true },
                     _count: { rating: true },
@@ -137,7 +134,7 @@ export async function POST(request: NextRequest) {
                 movieUpdateData.ratingCount = newRatingCount;
             }
 
-            // Apply movie count/rating updates if there are any
+            // Apply movie count/rating updates if there were changes
             if (Object.keys(movieUpdateData).length > 0) {
                 await tx.movie.update({
                     where: { id: movieId },
@@ -155,7 +152,7 @@ export async function POST(request: NextRequest) {
         }
         console.error("User Interaction API Error:", error);
         if (error instanceof Prisma.PrismaClientKnownRequestError) {
-            if (error.code === 'P2002') {
+            if (error.code === 'P2002') { 
                 return NextResponse.json({ error: "Interaction conflict, likely duplicate.", code: error.code }, { status: 409 });
             }
             return NextResponse.json({ error: "Database error", code: error.code }, { status: 500 });

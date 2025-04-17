@@ -6,8 +6,7 @@ import { MovieResult } from "@/types/backendType";
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
 
-// Validate if a value is an array of strings
-function isStringArray(value: unknown): value is string[] { // 
+function isStringArray(value: unknown): value is string[] {
     return Array.isArray(value) && value.every(item => typeof item === 'string');
 }
 
@@ -17,7 +16,6 @@ export async function POST(request: NextRequest) {
         let body;
         try {
             body = await request.json();
-            console.log("Received filter request body:", JSON.stringify(body, null, 2));
         } catch (error) {
             console.error("Failed to parse JSON body:", error);
             return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
@@ -122,7 +120,6 @@ export async function POST(request: NextRequest) {
             prisma.movie.count({ where })
         ]);
 
-        // Format and Return Response
         const formattedMovies: MovieResult[] = movies.map(movie => ({
             id: movie.id,
             name: movie.name,
@@ -146,7 +143,6 @@ export async function POST(request: NextRequest) {
         });
 
     } catch (error: unknown) {
-        // Handle Errors
         console.error("Filter Movies API Error:", error);
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
         return NextResponse.json(
