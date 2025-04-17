@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { InteractionType, Prisma, UserInteraction } from "@prisma/client"; // Import UserInteraction type
+import { InteractionType, Prisma, UserInteraction } from "@prisma/client";
+import { verifyUserToken } from "@/lib/server-auth";
 
 interface InteractionRequestBody {
-    userId?: string;
+    idToken?: string;
     movieId?: string;
     interactionType?: InteractionType;
     rating?: number;
@@ -12,21 +13,34 @@ interface InteractionRequestBody {
 export async function POST(request: NextRequest) {
     try {
         const body: InteractionRequestBody = await request.json();
-        const { userId, movieId, interactionType, rating } = body;
+        const { idToken, movieId, interactionType, rating } = body;
 
         // Validate required fields
-        if (!userId || !movieId || !interactionType) {
+        if (!idToken || !movieId || !interactionType) {
             return NextResponse.json(
-                { error: "Missing required fields: userId, movieId, interactionType" },
+                { error: "Missing required fields: idToken, movieId, interactionType" },
                 { status: 400 }
             );
         }
+
         if (!Object.values(InteractionType).includes(interactionType)) {
-             return NextResponse.json({ error: "Invalid interactionType" }, { status: 400 });
+            return NextResponse.json({ error: "Invalid interactionType" }, { status: 400 });
         }
+
+        const authResult = await verifyUserToken(idToken);
+
+        if (!authResult.authenticated || !authResult.userId) {
+            return NextResponse.json(
+                { error: authResult.error || "Authentication failed" },
+                { status: 401 }
+            );
+        }
+
+        const userId = authResult.userId;
+
         if (interactionType === InteractionType.RATE) {
             if (typeof rating !== 'number' || rating < 0 || rating > 5) {
-                 return NextResponse.json({ error: "Invalid rating value for RATE interaction (must be number between 0-5)" }, { status: 400 });
+                return NextResponse.json({ error: "Invalid rating value for RATE interaction (must be number between 0-5)" }, { status: 400 });
             }
         } else if (rating !== undefined) {
             return NextResponse.json({ error: "Rating should only be provided for RATE interactionType" }, { status: 400 });
@@ -40,7 +54,6 @@ export async function POST(request: NextRequest) {
         if (!userExists) return NextResponse.json({ error: `User with ID ${userId} not found` }, { status: 404 });
         if (!movieExists) return NextResponse.json({ error: `Movie with ID ${movieId} not found` }, { status: 404 });
 
-
         // Perform the interaction in a transaction
         let finalInteractionResult: UserInteraction | null = null;
 
@@ -53,7 +66,6 @@ export async function POST(request: NextRequest) {
                     data: { userId, movieId, interactionType }
                 });
                 movieUpdateData.view = { increment: 1 };
-                // Removed assignment: interactionCreatedOrUpdated = true;
             }
             // --- Handle LIKE / DISLIKE ---
             else if (interactionType === InteractionType.LIKE || interactionType === InteractionType.DISLIKE) {
@@ -139,14 +151,14 @@ export async function POST(request: NextRequest) {
 
     } catch (error: unknown) {
         if (error instanceof SyntaxError && error.message.includes("JSON")) {
-             return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+            return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
         }
         console.error("User Interaction API Error:", error);
         if (error instanceof Prisma.PrismaClientKnownRequestError) {
-             if (error.code === 'P2002') {
-                 return NextResponse.json({ error: "Interaction conflict, likely duplicate.", code: error.code }, { status: 409 });
-             }
-             return NextResponse.json({ error: "Database error", code: error.code }, { status: 500 });
+            if (error.code === 'P2002') {
+                return NextResponse.json({ error: "Interaction conflict, likely duplicate.", code: error.code }, { status: 409 });
+            }
+            return NextResponse.json({ error: "Database error", code: error.code }, { status: 500 });
         }
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
         return NextResponse.json(

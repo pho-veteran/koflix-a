@@ -87,3 +87,51 @@ export async function requireAuth() {
     redirect('/login');
   }
 }
+
+/**
+ * Verify a Firebase ID token from client-side authentication
+ * @param idToken The Firebase ID token to verify
+ * @returns Authentication result with user data or error
+ */
+export async function verifyUserToken(idToken: string) {
+  try {
+    if (!idToken) {
+      return { 
+        authenticated: false, 
+        userId: null,
+        error: 'No ID token provided'
+      };
+    }
+
+    // Initialize Firebase Admin if needed
+    const auth = initAdmin();
+    
+    // Verify the ID token
+    const decodedToken = await auth.verifyIdToken(idToken);
+    
+    // Check if the token is not expired
+    if (new Date().getTime() / 1000 > decodedToken.exp) {
+      return {
+        authenticated: false,
+        userId: null,
+        error: 'Token expired'
+      };
+    }
+    
+    return {
+      authenticated: true,
+      userId: decodedToken.uid,
+      email: decodedToken.email,
+      emailVerified: decodedToken.email_verified,
+      decodedToken,
+    };
+  } catch (error) {
+    console.error('Error verifying ID token:', error);
+    
+    return {
+      authenticated: false,
+      userId: null,
+      error: error instanceof Error ? error.message : 'Unknown error verifying token'
+    };
+  }
+}

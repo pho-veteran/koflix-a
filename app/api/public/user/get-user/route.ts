@@ -1,18 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { verifyUserToken } from "@/lib/server-auth";
 
 export async function POST(request: NextRequest) {
   try {
-    const { uid } = await request.json();
+    const { idToken } = await request.json();
 
-    if (!uid) {
+    if (!idToken) {
       return NextResponse.json(
-        { error: "User ID is required" },
-        { status: 400 }
+        { error: "Authentication token required" },
+        { status: 401 }
       );
     }
 
-    // Fetch user data from database
+    // Verify the Firebase ID token to get the user UID
+    const authResult = await verifyUserToken(idToken);
+
+    if (!authResult.authenticated || !authResult.userId) {
+      return NextResponse.json(
+        { error: authResult.error || "Authentication failed" },
+        { status: 401 }
+      );
+    }
+
+    // Extract authenticated user ID from the verified token
+    const uid = authResult.userId;
+
+    // Fetch user data from database using the verified UID
     const user = await prisma.user.findUnique({
       where: {
         id: uid,

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { InteractionType } from "@prisma/client";
 import { MovieResult } from "@/types/backendType";
+import { verifyUserToken } from "@/lib/server-auth";
 
 // --- Configuration ---
 const RECENT_VIEWS_LIMIT = 25;
@@ -90,18 +91,25 @@ async function getRecommendationsBasedOnRecentViews(userId: string, limit: numbe
 
 export async function POST(request: NextRequest) {
     try {
-        let userId: string | undefined;
-        try {
-            const body = await request.json();
-            userId = body.userId;
-        } catch (jsonError) {
-             if (jsonError instanceof SyntaxError) { return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 }); }
-             return NextResponse.json({ error: "userId is required in body" }, { status: 400 });
+        const { idToken } = await request.json();
+        
+        if (!idToken) {
+            return NextResponse.json(
+                { error: "Authentication token required" }, 
+                { status: 401 }
+            );
         }
 
-        if (!userId || typeof userId !== 'string') {
-            return NextResponse.json({ error: "Valid userId (string) is required" }, { status: 400 });
+        const authResult = await verifyUserToken(idToken);
+
+        if (!authResult.authenticated || !authResult.userId) {
+            return NextResponse.json(
+                { error: authResult.error || "Authentication failed" },
+                { status: 401 }
+            );
         }
+
+        const userId = authResult.userId;
 
         const { recommendations, strategy } = await getRecommendationsBasedOnRecentViews(userId);
         return NextResponse.json({ data: recommendations, strategy: strategy });
