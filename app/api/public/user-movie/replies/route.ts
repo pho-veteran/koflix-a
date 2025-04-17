@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
         if (!content || typeof content !== 'string' || content.trim().length === 0) {
             return NextResponse.json({ error: "Reply content is required" }, { status: 400 });
         }
-        if (content.length > 500) { // Example length limit for replies
+        if (content.length > 500) { 
             return NextResponse.json({ error: "Reply content exceeds maximum length (500 characters)" }, { status: 400 });
         }
         if (!commentId || typeof commentId !== 'string') {

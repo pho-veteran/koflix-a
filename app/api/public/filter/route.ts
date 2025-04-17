@@ -83,11 +83,9 @@ export async function POST(request: NextRequest) {
         if (startYear !== undefined || endYear !== undefined) {
             where.year = {};
             if (startYear !== undefined) {
-                 console.log(`Applying filter: year >= ${startYear}`);
                  where.year.gte = startYear;
             }
             if (endYear !== undefined) {
-                 console.log(`Applying filter: year <= ${endYear}`);
                  where.year.lte = endYear;
             }
         }
