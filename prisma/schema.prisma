@@ -111,9 +111,9 @@ model Movie {
 
   view         Int   @default(0)
   rating       Float @default(0)
-  ratingCount  Int?  @default(0) 
-  likeCount    Int   @default(0) 
-  dislikeCount Int   @default(0) 
+  ratingCount  Int?  @default(0)
+  likeCount    Int   @default(0)
+  dislikeCount Int   @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -134,26 +134,27 @@ model Episode {
   movieId       String          @db.ObjectId
   servers       EpisodeServer[]
   createdAt     DateTime        @default(now())
-  WatchHistory  WatchHistory[]
   Comment       Comment[]
 
   @@unique([movieId, slug])
 }
 
 model WatchHistory {
-  id              String   @id @default(auto()) @map("_id") @db.ObjectId
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id              String        @id @default(auto()) @map("_id") @db.ObjectId
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId          String
-  movie           Movie    @relation(fields: [movieId], references: [id], onDelete: Cascade)
-  movieId         String   @db.ObjectId
-  episode         Episode? @relation(fields: [episodeId], references: [id], onDelete: Cascade)
-  episodeId       String?  @db.ObjectId
-  progress        Float    @default(0)
-  durationWatched Int      @default(0)
-  watchedAt       DateTime @default(now())
+  movie           Movie         @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  movieId         String        @db.ObjectId
+  episodeServer   EpisodeServer @relation(fields: [episodeServerId], references: [id], onDelete: Cascade)
+  episodeServerId String        @db.ObjectId
+  progress        Float         @default(0)
+  durationWatched Int           @default(0)
+  watchedAt       DateTime      @default(now()) @map("watchedAt")
 
+  @@unique([userId, movieId, episodeServerId])
   @@index([userId, watchedAt])
   @@index([movieId])
+  @@index([episodeServerId])
 }
 
 model Comment {
@@ -201,6 +202,8 @@ model EpisodeServer {
   link_m3u8   String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  WatchHistory WatchHistory[]
 
   @@index([episodeId])
 }
