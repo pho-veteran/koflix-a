@@ -120,61 +120,63 @@ export const ImportModal = ({ isOpen, onClose, selectedMovies }: ImportModalProp
     // Track which movies we're fetching
     pendingFetchesRef.current = new Set(moviesToFetch.map(m => m.slug));
     
-    // Process movies with staggered timing
-    let delay = 0;
-    const delayIncrement = 100; // ms between requests
+    // Set maximum concurrent requests
+    const MAX_CONCURRENT_REQUESTS = 5;
     
-    for (const movie of moviesToFetch) {
+    // Process movies in parallel batches
+    const processBatch = async (batch: KKApiMovieBase[]) => {
+      await Promise.all(batch.map(async (movie) => {
+        // Skip if we're no longer fetching or this specific fetch was canceled
+        if (!fetchingRef.current || !pendingFetchesRef.current.has(movie.slug)) return;
+        
+        try {
+          // Make the request
+          const result = await getMovieDetail(movie.slug);
+          
+          // Skip updating state if we're no longer fetching
+          if (!fetchingRef.current || !pendingFetchesRef.current.has(movie.slug)) return;
+          
+          // Remove from pending set
+          pendingFetchesRef.current.delete(movie.slug);
+          
+          // Update state with result
+          setImportStatus(prev => ({
+            ...prev,
+            [movie._id]: {
+              loading: false,
+              detailedMovie: result.movie,
+              episodes: result.episodes,
+              // Only set error if it's actually present
+              ...(result.error ? { error: result.error } : {})
+            }
+          }));
+        } catch (error: unknown) {
+          // Skip updating state if we're no longer fetching
+          if (!fetchingRef.current || !pendingFetchesRef.current.has(movie.slug)) return;
+          
+          // Remove from pending set
+          pendingFetchesRef.current.delete(movie.slug);
+          
+          // Update state with error
+          setImportStatus(prev => ({
+            ...prev,
+            [movie._id]: {
+              loading: false,
+              error: "Failed to fetch movie details"
+            }
+          }));
+          console.error("Error fetching movie details:", error);
+        }
+      }));
+    };
+    
+    // Process movies in batches to control concurrency
+    for (let i = 0; i < moviesToFetch.length; i += MAX_CONCURRENT_REQUESTS) {
       // Skip if we've already started closing
       if (!fetchingRef.current) break;
       
-      // Add delay between requests
-      if (delay > 0) {
-        await new Promise(resolve => setTimeout(resolve, delay));
-      }
-      delay = delayIncrement;
-      
-      // Skip if we're no longer fetching or this specific fetch was canceled
-      if (!fetchingRef.current || !pendingFetchesRef.current.has(movie.slug)) continue;
-      
-      try {
-        // Make the request
-        const result = await getMovieDetail(movie.slug);
-        
-        // Skip updating state if we're no longer fetching
-        if (!fetchingRef.current || !pendingFetchesRef.current.has(movie.slug)) continue;
-        
-        // Remove from pending set
-        pendingFetchesRef.current.delete(movie.slug);
-        
-        // Update state with result
-        setImportStatus(prev => ({
-          ...prev,
-          [movie._id]: {
-            loading: false,
-            detailedMovie: result.movie,
-            episodes: result.episodes,
-            // Only set error if it's actually present
-            ...(result.error ? { error: result.error } : {})
-          }
-        }));
-      } catch (error: unknown) {
-        // Skip updating state if we're no longer fetching
-        if (!fetchingRef.current || !pendingFetchesRef.current.has(movie.slug)) continue;
-        
-        // Remove from pending set
-        pendingFetchesRef.current.delete(movie.slug);
-        
-        // Update state with error
-        setImportStatus(prev => ({
-          ...prev,
-          [movie._id]: {
-            loading: false,
-            error: "Failed to fetch movie details"
-          }
-        }));
-        console.error("Error fetching movie details:", error);
-      }
+      const batch = moviesToFetch.slice(i, i + MAX_CONCURRENT_REQUESTS);
+      await processBatch(batch);
     }
   }, [checkExistingMovies]);
 

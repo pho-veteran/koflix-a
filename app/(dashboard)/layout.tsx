@@ -4,6 +4,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeProvider } from "@/providers/theme-provider";
+import prisma from "@/lib/prisma";
 
 export const iframeHeight = "800px"
 
@@ -15,11 +16,22 @@ export default async function DashboardLayout({
     children: React.ReactNode;
 }) {
     // Check authentication using server-side verification
-    const { authenticated } = await verifySessionCookie();
+    const { authenticated, userId } = await verifySessionCookie();
 
     // If not authenticated, redirect to login page
-    if (!authenticated) {
+    if (!authenticated || !userId) {
         redirect(`/login`);
+    }
+    
+    // Check user role from database
+    const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { role: true }
+    });
+    
+    // If not admin, redirect to no-permission page
+    if (!user || user.role !== "ADMIN") {
+        redirect('/no-permission');
     }
 
     return (
@@ -31,7 +43,6 @@ export default async function DashboardLayout({
                     enableSystem
                     disableTransitionOnChange
                 >
-
                     <SidebarProvider className="flex flex-col">
                         <SiteHeader />
                         <div className="flex flex-1">
@@ -43,7 +54,6 @@ export default async function DashboardLayout({
                     </SidebarProvider>
                 </ThemeProvider>
             </div>
-
         </>
     );
 }
