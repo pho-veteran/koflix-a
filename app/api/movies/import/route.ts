@@ -2,13 +2,57 @@ import { NextResponse } from 'next/server';
 import { KKMovieImportPayload, KKApiMovie } from '@/types/kkapi';
 import prisma from '@/lib/prisma';
 
+type KKApiEpisodeItem = {
+  name: string;
+  slug: string;
+  movieId: string;
+};
+
+type KKApiEpisodeServerItem = {
+  server_name: string;
+  filename: string;
+  link_embed: string;
+  link_m3u8: string;
+  movieId: string;
+  slug: string;
+};
+
+type ImportItem = KKApiMovie | KKApiEpisodeItem | KKApiEpisodeServerItem;
+
+// Helper function for batch processing with controlled concurrency
+async function processBatch<T, R>(
+  items: T[],
+  batchSize: number,
+  processItem: (item: T) => Promise<R>
+): Promise<Map<T, R | Error>> {
+  const results = new Map<T, R | Error>();
+  
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize);
+    const batchPromises = batch.map(async (item) => {
+      try {
+        const result = await processItem(item);
+        results.set(item, result);
+        return { item, result, success: true };
+      } catch (error) {
+        results.set(item, error instanceof Error ? error : new Error(String(error)));
+        return { item, error, success: false };
+      }
+    });
+    
+    await Promise.all(batchPromises);
+  }
+  
+  return results;
+}
+
 // Helper function to process movie and its related entities
 async function processMovie(movie: KKApiMovie) {
-  // First, find or create genre entries
+  // Find or create genre entries
   const genrePromises = movie.category.map(async (category) => {
     return prisma.genre.upsert({
       where: { slug: category.slug },
-      update: {}, // No updates if exists
+      update: {},
       create: {
         name: category.name,
         slug: category.slug
@@ -21,7 +65,7 @@ async function processMovie(movie: KKApiMovie) {
   const countryPromises = movie.country.map(async (country) => {
     return prisma.country.upsert({
       where: { slug: country.slug },
-      update: {}, // No updates if exists
+      update: {},
       create: {
         name: country.name,
         slug: country.slug
@@ -33,7 +77,7 @@ async function processMovie(movie: KKApiMovie) {
   // Find or create movie type
   const type = await prisma.movieType.upsert({
     where: { slug: movie.type },
-    update: {}, // No updates if exists
+    update: {},
     create: {
       name: movie.type,
       slug: movie.type
@@ -82,7 +126,6 @@ async function processMovie(movie: KKApiMovie) {
 // POST handler for importing data
 export async function POST(req: Request) {
   try {
-    // Parse request body
     const payload: KKMovieImportPayload = await req.json();
     
     // Validate payload structure
@@ -96,72 +139,98 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid payload: episodeServers array is required' }, { status: 400 });
     }
     
-    // Track the results
+    // Results tracking
     const results = {
       movies: { processed: 0, succeeded: 0, failed: 0 },
       episodes: { processed: 0, succeeded: 0, failed: 0 },
       episodeServers: { processed: 0, succeeded: 0, failed: 0 }
     };
     
-    type ImportError = {
+    const errors: Array<{
       type: 'movie' | 'episode' | 'episodeServer';
       error: Error | unknown;
-      item: KKApiMovie | KKMovieImportPayload['episodes'][0] | KKMovieImportPayload['episodeServers'][0];
-    };
+      item: ImportItem; 
+    }> = [];
     
-    const errors: ImportError[] = [];
+    // Set batch size
+    const BATCH_SIZE = 50;
     
-    // Step 1: Import movies
-    // Map both the API movie _id and slug to our database ID for flexibility
+    // Step 1: Process movies in parallel batches
+    console.log(`Processing ${payload.movies.length} movies in parallel batches of ${BATCH_SIZE}...`);
     const movieMappings = new Map<string, string>();
     
-    for (const movie of payload.movies) {
-      try {
+    const movieResults = await processBatch(
+      payload.movies,
+      BATCH_SIZE,
+      async (movie) => {
         results.movies.processed++;
-        const createdMovie = await processMovie(movie);
-        // Store both _id and slug mappings for flexibility
-        movieMappings.set(movie._id, createdMovie.id);
-        movieMappings.set(movie.slug, createdMovie.id);
-        results.movies.succeeded++;
-      } catch (error) {
+        return await processMovie(movie);
+      }
+    );
+    
+    // Process movie results and build mappings
+    for (const [movie, result] of movieResults.entries()) {
+      if (result instanceof Error) {
         results.movies.failed++;
-        errors.push({ type: 'movie', error, item: movie });
+        errors.push({ type: 'movie', error: result, item: movie });
+      } else {
+        // Store both _id and slug mappings
+        movieMappings.set(movie._id, result.id);
+        movieMappings.set(movie.slug, result.id);
+        results.movies.succeeded++;
       }
     }
     
-    // Step 2: Import episodes
+    // Step 2: Process episodes in parallel batches
+    console.log(`Processing ${payload.episodes.length} episodes in parallel batches of ${BATCH_SIZE}...`);
     const episodeKeyMap = new Map<string, string>();
     
-    for (const episode of payload.episodes) {
-      try {
+    const episodeResults = await processBatch(
+      payload.episodes,
+      BATCH_SIZE,
+      async (episode) => {
         results.episodes.processed++;
-        // Get the database movie ID
+        
+        // Get database movie ID
         const dbMovieId = movieMappings.get(episode.movieId);
         if (!dbMovieId) {
           throw new Error(`Movie with ID ${episode.movieId} not found in database`);
         }
         
-        const createdEpisode = await prisma.episode.create({
+        return await prisma.episode.create({
           data: {
             name: episode.name,
             slug: episode.slug,
             movieId: dbMovieId,
           }
         });
-        
-        // Store composite key for episode servers
-        episodeKeyMap.set(`${dbMovieId}:${episode.slug}`, createdEpisode.id);
-        results.episodes.succeeded++;
-      } catch (error) {
+      }
+    );
+    
+    // Process episode results and build mappings
+    for (const [episode, result] of episodeResults.entries()) {
+      if (result instanceof Error) {
         results.episodes.failed++;
-        errors.push({ type: 'episode', error, item: episode });
+        errors.push({ type: 'episode', error: result, item: episode });
+      } else {
+        const dbMovieId = movieMappings.get(episode.movieId);
+        if (dbMovieId) {
+          // Store composite key for episode servers
+          episodeKeyMap.set(`${dbMovieId}:${episode.slug}`, result.id);
+          results.episodes.succeeded++;
+        }
       }
     }
     
-    // Step 3: Import episode servers
-    for (const server of payload.episodeServers) {
-      try {
+    // Step 3: Process episode servers in parallel batches
+    console.log(`Processing ${payload.episodeServers.length} episode servers in parallel batches of ${BATCH_SIZE}...`);
+    
+    const serverResults = await processBatch(
+      payload.episodeServers,
+      BATCH_SIZE,
+      async (server) => {
         results.episodeServers.processed++;
+        
         // Get movie database ID
         const dbMovieId = movieMappings.get(server.movieId);
         if (!dbMovieId) {
@@ -174,7 +243,7 @@ export async function POST(req: Request) {
           throw new Error(`Episode with movieId ${server.movieId} and slug ${server.slug} not found`);
         }
         
-        await prisma.episodeServer.create({
+        return await prisma.episodeServer.create({
           data: {
             server_name: server.server_name,
             filename: server.filename,
@@ -183,34 +252,34 @@ export async function POST(req: Request) {
             episodeId: episodeId
           }
         });
-        
-        results.episodeServers.succeeded++;
-      } catch (error) {
+      }
+    );
+    
+    // Process server results
+    for (const [server, result] of serverResults.entries()) {
+      if (result instanceof Error) {
         results.episodeServers.failed++;
-        errors.push({ type: 'episodeServer', error, item: server });
+        errors.push({ type: 'episodeServer', error: result, item: server });
+      } else {
+        results.episodeServers.succeeded++;
       }
     }
     
     return NextResponse.json({
       success: true,
       results,
-      errors: errors.length > 0 ? errors.map(e => ({
+      errors: errors.map(e => ({
         type: e.type,
         message: e.error instanceof Error ? e.error.message : String(e.error),
         item: e.item
-      })) : []
+      }))
     });
     
   } catch (error: unknown) {
     console.error('Import error:', error);
-    
-    const errorMessage = error instanceof Error 
-      ? error.message 
-      : 'An unexpected error occurred';
-    
     return NextResponse.json({ 
       success: false, 
-      error: errorMessage
+      error: error instanceof Error ? error.message : 'An unexpected error occurred'
     }, { status: 500 });
   }
 }
