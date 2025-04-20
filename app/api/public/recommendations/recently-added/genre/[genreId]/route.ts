@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { MovieResult } from "@/types/backendType";
+import { MovieFrontEndResult } from "@/types/backendType";
 
 // --- Configuration ---
 const DEFAULT_LIMIT = 12;
@@ -9,7 +9,7 @@ const RECENT_DAYS_WINDOW = 7;
 async function getRecentlyAddedMoviesByGenre(
     genreId: string,
     limit: number = DEFAULT_LIMIT
-): Promise<{ recommendations: MovieResult[]; strategy: string }> {
+): Promise<{ recommendations: MovieFrontEndResult[]; strategy: string }> {
     const sinceDate = new Date();
     sinceDate.setDate(sinceDate.getDate() - RECENT_DAYS_WINDOW);
 
@@ -54,10 +54,10 @@ async function getRecentlyAddedMoviesByGenre(
         }
     });
 
-    const recommendations: MovieResult[] = movieIdsOrderedByRecentEpisode.flatMap(movieId => {
+    const recommendations: MovieFrontEndResult[] = movieIdsOrderedByRecentEpisode.flatMap(movieId => {
         const movie = recentMovies.find(m => m.id === movieId);
         if (!movie) return [];
-        const result: MovieResult = {
+        const result: MovieFrontEndResult = {
             id: movie.id, name: movie.name, slug: movie.slug,
             poster_url: movie.poster_url, thumb_url: movie.thumb_url, year: movie.year,
         };

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { MovieResult } from "@/types/backendType"; // Adjust path if needed
+import { MovieFrontEndResult } from "@/types/backendType";
 
 // --- Configuration ---
 const DEFAULT_LIMIT = 12; // Number of movies to return
@@ -8,7 +8,7 @@ const RECENT_DAYS_WINDOW = 7; // Look for episodes added in the last 7 days
 
 async function getRecentlyAddedMovies(
     limit: number = DEFAULT_LIMIT
-): Promise<{ recommendations: MovieResult[]; strategy: string }> {
+): Promise<{ recommendations: MovieFrontEndResult[]; strategy: string }> {
 
     // 1. Calculate the date for the start of the window
     const sinceDate = new Date();
@@ -70,14 +70,14 @@ async function getRecentlyAddedMovies(
         }
     });
 
-    // 6. Re-order the fetched movies using flatMap and map to MovieResult type
-    const recommendations: MovieResult[] = movieIdsOrderedByRecentEpisode.flatMap(movieId => {
+    // 6. Re-order the fetched movies using flatMap and map to MovieFrontEndResult type
+    const recommendations: MovieFrontEndResult[] = movieIdsOrderedByRecentEpisode.flatMap(movieId => {
         const movie = recentMovies.find(m => m.id === movieId);
         if (!movie) {
             return []; // Return empty array if movie not found (flatMap will skip it)
         }
-        // Construct and return the MovieResult object within an array
-        const result: MovieResult = {
+        // Construct and return the MovieFrontEndResult object within an array
+        const result: MovieFrontEndResult = {
             id: movie.id,
             name: movie.name,
             slug: movie.slug,

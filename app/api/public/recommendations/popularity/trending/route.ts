@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { InteractionType } from "@prisma/client";
-import { MovieResult } from "@/types/backendType";
+import { MovieFrontEndResult } from "@/types/backendType";
 
 // --- Configuration ---
 const TRENDING_WINDOW_DAYS = 3;
@@ -9,7 +9,7 @@ const TRENDING_FINAL_LIMIT = 10;
 const TRENDING_CANDIDATE_MULTIPLIER = 2;
 const MAX_GENRE_REPETITION = 3;
 
-async function getTrendingMovies(limit: number = TRENDING_FINAL_LIMIT): Promise<{ trending: MovieResult[]; strategy: string }> {
+async function getTrendingMovies(limit: number = TRENDING_FINAL_LIMIT): Promise<{ trending: MovieFrontEndResult[]; strategy: string }> {
     const trendingSince = new Date(Date.now() - TRENDING_WINDOW_DAYS * 24 * 60 * 60 * 1000);
 
     // 1. Get initial popular candidates based on recent views
@@ -62,7 +62,7 @@ async function getTrendingMovies(limit: number = TRENDING_FINAL_LIMIT): Promise<
     const popularMoviesMap = new Map(popularMoviesDetails.map(m => [m.id, m]));
 
     // 3. Build final list with simple genre diversification (using slugs internally)
-    const finalTrendingList: MovieResult[] = [];
+    const finalTrendingList: MovieFrontEndResult[] = [];
     const genreCounts: { [genreSlug: string]: number } = {}; // Use slug as key for diversification
 
     for (const movieId of popularMovieIds) {

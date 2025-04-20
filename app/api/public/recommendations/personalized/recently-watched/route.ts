@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { InteractionType } from "@prisma/client";
-import { MovieResult } from "@/types/backendType";
+import { MovieFrontEndResult } from "@/types/backendType";
 import { verifyUserToken } from "@/lib/server-auth";
 
 // --- Configuration ---
 const RECENT_VIEWS_LIMIT = 25;
 const RECOMMENDATION_LIMIT = 10;
 
-async function getRecommendationsBasedOnRecentViews(userId: string, limit: number = RECOMMENDATION_LIMIT): Promise<{ recommendations: MovieResult[]; strategy: string }> {
-    let recommendations: MovieResult[] = [];
+async function getRecommendationsBasedOnRecentViews(userId: string, limit: number = RECOMMENDATION_LIMIT): Promise<{ recommendations: MovieFrontEndResult[]; strategy: string }> {
+    let recommendations: MovieFrontEndResult[] = [];
     let strategy = 'popularity_fallback';
 
     // 1. Get user's recent VIEW interactions

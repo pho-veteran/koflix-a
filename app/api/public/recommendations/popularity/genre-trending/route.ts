@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { InteractionType } from "@prisma/client";
-import { MovieResult } from "@/types/backendType";
+import { MovieFrontEndResult } from "@/types/backendType";
 
 // --- Configuration ---
 const TRENDING_WINDOW_DAYS = 7; 
@@ -12,7 +12,7 @@ const MAX_COUNTRY_REPETITION_IN_GENRE = 3;
 async function getGenreTrendingMovies(
     genreId: string,
     limit: number = TRENDING_FINAL_LIMIT
-): Promise<{ trending: MovieResult[]; strategy: string }> {
+): Promise<{ trending: MovieFrontEndResult[]; strategy: string }> {
     const trendingSince = new Date(Date.now() - TRENDING_WINDOW_DAYS * 24 * 60 * 60 * 1000);
 
     // 1. Get initial popular candidates within the genre based on recent views
@@ -77,7 +77,7 @@ async function getGenreTrendingMovies(
     const popularMoviesMap = new Map(popularMoviesDetails.map(m => [m.id, m]));
 
     // 3. Build final list with country diversification within the genre
-    const finalTrendingList: MovieResult[] = [];
+    const finalTrendingList: MovieFrontEndResult[] = [];
     const countryCounts: { [countryId: string]: number } = {};
 
     for (const movieId of popularMovieIds) {

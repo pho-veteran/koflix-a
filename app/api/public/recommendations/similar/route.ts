@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { MovieResult } from "@/types/backendType";
+import { MovieFrontEndResult } from "@/types/backendType";
 
-async function getRelatedMovies(movieId: string, limit: number = 10): Promise<{ related: MovieResult[]; strategy: string }> {
+async function getRelatedMovies(movieId: string, limit: number = 10): Promise<{ related: MovieFrontEndResult[]; strategy: string }> {
     const targetMovie = await prisma.movie.findUnique({
         where: { id: movieId },
         select: {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { InteractionType } from "@prisma/client";
-import { MovieResult } from "@/types/backendType";
+import { MovieFrontEndResult } from "@/types/backendType";
 import { verifyUserToken } from "@/lib/server-auth";
 
 // --- Configuration ---
@@ -10,8 +10,8 @@ const SIMILAR_USER_INTERACTION_OVERLAP = 3; // Min shared liked/rated movies to 
 const USER_RECOMMENDATION_LIMIT = 10;
 const POSITIVE_RATING_THRESHOLD = 4; // New threshold for 1-5 scale
 
-async function getUserRecommendations(userId: string, limit: number = USER_RECOMMENDATION_LIMIT): Promise<{ recommendations: MovieResult[]; strategy: string }> {
-    let recommendations: MovieResult[] = [];
+async function getUserRecommendations(userId: string, limit: number = USER_RECOMMENDATION_LIMIT): Promise<{ recommendations: MovieFrontEndResult[]; strategy: string }> {
+    let recommendations: MovieFrontEndResult[] = [];
     let strategy = 'popularity_fallback'; // Default
 
     // 1. Get target user's positive interactions (likes, high ratings)

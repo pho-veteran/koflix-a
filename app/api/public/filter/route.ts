@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
-import { MovieResult } from "@/types/backendType";
+import { MovieFrontEndResult } from "@/types/backendType";
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
             prisma.movie.count({ where })
         ]);
 
-        const formattedMovies: MovieResult[] = movies.map(movie => ({
+        const formattedMovies: MovieFrontEndResult[] = movies.map(movie => ({
             id: movie.id,
             name: movie.name,
             slug: movie.slug,
