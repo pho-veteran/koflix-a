@@ -3,14 +3,16 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
-import { StatsPanel } from "./stats"; 
+import { StatsPanel } from "./stats";
 import { ActionBar } from "./actions";
 import { MovieList } from "./movie-list";
 import { MovieResult } from "@/types/backendType";
 import toast from "react-hot-toast";
 import { Card, CardContent } from "@/components/ui/card";
-import { Trash } from "lucide-react";
+import { Trash, Edit2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { BulkUpdateModal } from "./bulk-update";
+import { MoviesListPagination } from "./movie-list/movies-list-pagination";
 
 type MovieFilters = {
     typeId: string | null;
@@ -31,10 +33,10 @@ export const MoviesClient = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalCount, setTotalCount] = useState(0);
-    
+
     const [searchInput, setSearchInput] = useState("");
     const [searchQuery, setSearchQuery] = useState("");
-    
+
     const [filters, setFilters] = useState<MovieFilters>({
         typeId: null,
         genreIds: [],
@@ -50,6 +52,9 @@ export const MoviesClient = () => {
     const [selectedMovieIds, setSelectedMovieIds] = useState<Set<string>>(new Set());
 
     const [isDeleting, setIsDeleting] = useState(false);
+
+    const [bulkUpdateModalOpen, setBulkUpdateModalOpen] = useState(false);
+    const [selectedMoviesData, setSelectedMoviesData] = useState<MovieResult[]>([]);
 
     const initialFetchDone = useRef(false);
 
@@ -207,14 +212,19 @@ export const MoviesClient = () => {
         }
     };
 
+    // Helper to clear selection and exit select mode
+    const clearSelectionAndExitSelectMode = useCallback(() => {
+        setSelectedMovieIds(new Set());
+        setIsSelectMode(false);
+    }, []);
+
     // Toggle select mode
     const toggleSelectMode = () => {
         const newMode = !isSelectMode;
         setIsSelectMode(newMode);
-
         // Clear selection when exiting select mode
         if (!newMode) {
-            setSelectedMovieIds(new Set());
+            clearSelectionAndExitSelectMode();
         }
     };
 
@@ -229,25 +239,18 @@ export const MoviesClient = () => {
 
         try {
             const movieIdsArray = Array.from(selectedMovieIds);
-            
-            const response = await axios.post('/api/movies/bulk-delete', {
+            const response = await axios.post('/api/movies/bulk-deletion', {
                 movieIds: movieIdsArray
             });
-
             const result = response.data;
-            
             toast.success(`Successfully deleted ${result.count} movies`);
-            
             if (result.notFoundIds && result.notFoundIds.length > 0) {
                 toast.error(`${result.notFoundIds.length} movies were not found and couldn't be deleted`);
             }
-            
             // Refresh the movie list
             fetchMovies(1);
-            
         } catch (error) {
             console.error('Error deleting movies:', error);
-            
             if (axios.isAxiosError(error) && error.response) {
                 if (error.response.status === 401) {
                     toast.error('Unauthorized. Please log in again.');
@@ -261,10 +264,17 @@ export const MoviesClient = () => {
             }
         } finally {
             setIsDeleting(false);
-            
-            setSelectedMovieIds(new Set());
-            setIsSelectMode(false);
+            clearSelectionAndExitSelectMode();
         }
+    };
+
+    // Handle bulk update
+    const handleBulkUpdate = async () => {
+        if (selectedMovieIds.size === 0) return;
+        // Get movie data for selected IDs
+        const selectedMovies = movies.filter(movie => selectedMovieIds.has(movie.id));
+        setSelectedMoviesData(selectedMovies);
+        setBulkUpdateModalOpen(true);
     };
 
     // Clear selection when movies change
@@ -306,29 +316,41 @@ export const MoviesClient = () => {
                 <div className="sticky top-2 z-30 bg-muted/80 border backdrop-blur-sm rounded-lg shadow-sm">
                     <div className="px-4 py-3 flex items-center justify-between">
                         <div className="font-medium">
-                            {selectedMovieIds.size > 0 
-                                ? `${selectedMovieIds.size} movies selected` 
-                                : "Select movies to delete"}
+                            {selectedMovieIds.size > 0
+                                ? `${selectedMovieIds.size} movies selected`
+                                : "Select movies to perform bulk actions"}
                         </div>
                         <div className="flex items-center gap-2">
-                            <Button 
-                                variant="outline" 
-                                size="sm" 
+                            <Button
+                                variant="outline"
+                                size="sm"
                                 onClick={toggleSelectMode}
                             >
                                 Cancel
                             </Button>
                             {selectedMovieIds.size > 0 && (
-                                <Button 
-                                    variant="destructive" 
-                                    size="sm"
-                                    onClick={handleBulkDelete}
-                                    className="flex items-center gap-1"
-                                    disabled={isDeleting}
-                                >
-                                    <Trash size={16} />
-                                    {isDeleting ? "Deleting..." : "Delete Selected"}
-                                </Button>
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        variant="default" 
+                                        size="sm"
+                                        onClick={handleBulkUpdate}
+                                        className="flex items-center gap-1"
+                                        disabled={isDeleting}
+                                    >
+                                        <Edit2 size={16} />
+                                        Update
+                                    </Button>
+                                    <Button
+                                        variant="destructive"
+                                        size="sm"
+                                        onClick={handleBulkDelete}
+                                        className="flex items-center gap-1 text-white"
+                                        disabled={isDeleting}
+                                    >
+                                        <Trash size={16} />
+                                        {isDeleting ? "Deleting..." : "Delete"}
+                                    </Button>
+                                </div>
                             )}
                         </div>
                     </div>
@@ -365,6 +387,14 @@ export const MoviesClient = () => {
                 filteredCount={movies.length}
             />
 
+            {/* Top Pagination */}
+            <MoviesListPagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                isLoading={isLoading}
+                onPageChange={handlePageChange}
+            />
+
             <MovieList
                 movies={movies}
                 isLoading={isLoading}
@@ -375,6 +405,21 @@ export const MoviesClient = () => {
                 isSelectMode={isSelectMode}
                 selectedMovieIds={selectedMovieIds}
                 onSelectMovie={handleSelectMovie}
+            />
+
+            <BulkUpdateModal 
+                isOpen={bulkUpdateModalOpen}
+                onClose={() => {
+                    setBulkUpdateModalOpen(false);
+                    clearSelectionAndExitSelectMode();
+                }}
+                selectedMovies={selectedMoviesData}
+                onMoviesUpdated={() => {
+                    fetchMovies(1);
+                    setBulkUpdateModalOpen(false);
+                    clearSelectionAndExitSelectMode();
+                    toast.success("Movies updated successfully");
+                }}
             />
         </div>
     );

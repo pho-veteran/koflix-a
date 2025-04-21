@@ -2,7 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, FilterX, FilterIcon, Plus, ArrowUp, ArrowDown, Trash2, X } from "lucide-react";
+import { Search, FilterX, FilterIcon, Plus, ArrowUp, ArrowDown, X, CheckSquare } from "lucide-react";
 import { FilterDrawer } from "./filter-drawer";
 import { SelectionPopover } from "./selection-popover";
 import { useState } from "react";
@@ -117,7 +117,7 @@ export function ActionBar({
                             <Search className="h-4 w-4 absolute left-2.5 top-2.5 text-muted-foreground" />
                             <Input
                                 placeholder="Search by title..."
-                                className="pl-9 w-full pr-8"
+                                className="pl-9 w-full pr-8 h-full"
                                 value={searchInput}
                                 onChange={(e) => onSearchInputChange(e.target.value)}
                                 onKeyDown={handleKeyDown}
@@ -209,7 +209,7 @@ export function ActionBar({
                             </div>
                         )}
 
-                        {/* Selection popover or delete trigger button */}
+                        {/* Selection popover or bulk actions trigger button */}
                         {isSelectMode ? (
                             <SelectionPopover 
                                 onSelectByType={onSelectByType}
@@ -224,8 +224,8 @@ export function ActionBar({
                                 onClick={onToggleSelectMode}
                                 disabled={isLoading}
                             >
-                                <Trash2 className="h-4 w-4" />
-                                <span className="hidden sm:inline">Delete</span>
+                                <CheckSquare className="h-4 w-4" />
+                                <span className="hidden sm:inline">Select</span>
                             </Button>
                         )}
 

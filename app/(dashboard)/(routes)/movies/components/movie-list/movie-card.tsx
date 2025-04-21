@@ -146,7 +146,7 @@ export function MovieCard({
         </div>
       </CardContent>
 
-      <CardFooter className={`flex-col items-start p-3 pt-2 min-h-[60px] ${isSelected ? 'bg-primary/5' : ''}`}>
+      <CardFooter className={`flex-col items-start p-3 pt-2 min-h-[60px] h-full ${isSelected ? 'bg-primary/5' : ''}`}>
         <h3 className={`font-medium text-sm leading-tight line-clamp-2 w-full mt-1 ${isSelected ? 'text-primary' : ''}`}>
           {movie.name}
         </h3>
@@ -155,17 +155,6 @@ export function MovieCard({
           <p className="text-xs text-muted-foreground truncate w-full mt-1">
             {movie.origin_name}
           </p>
-        )}
-
-        {movie.rating > 0 && (
-          <div className="w-full mt-2">
-            <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
-              <div
-                className={`h-full rounded-full ${isSelected ? 'bg-primary' : 'bg-amber-500'}`}
-                style={{ width: `${Math.min(100, (movie.rating / 10) * 100)}%` }}
-              />
-            </div>
-          </div>
         )}
       </CardFooter>
     </Card>
