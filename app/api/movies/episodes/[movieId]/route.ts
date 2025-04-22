@@ -12,7 +12,6 @@ export async function GET(
       return NextResponse.json({ error: "Movie ID is required" }, { status: 400 });
     }
 
-    // Check if movie exists
     const movieExists = await prisma.movie.findUnique({
       where: { id: movieId },
       select: { id: true }
@@ -22,14 +21,13 @@ export async function GET(
       return NextResponse.json({ error: "Movie not found" }, { status: 404 });
     }
 
-    // Get all episodes with their servers for the movie
     const episodes = await prisma.episode.findMany({
       where: { movieId },
       include: {
         servers: true
       },
       orderBy: {
-        createdAt: 'asc' // Default order by creation date
+        createdAt: 'asc'
       }
     });
 
@@ -37,5 +35,61 @@ export async function GET(
   } catch (error) {
     console.error("[EPISODES_GET]", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+// Create new episode
+export async function POST(
+  req: Request,
+  { params }: { params: { movieId: string } }
+) {
+  try {
+      const body = await req.json();
+      const { movieId } = await params;
+
+      // Validate request
+      const { name, slug } = body;
+
+      if (!name || !slug) {
+          return new NextResponse("Name and slug are required", {
+              status: 400,
+          });
+      }
+
+      // Check that the movie exists
+      const movie = await prisma.movie.findUnique({
+          where: { id: movieId },
+          select: { id: true }
+      });
+
+      if (!movie) {
+          return new NextResponse("Movie not found", { status: 404 });
+      }
+
+      const existingEpisode = await prisma.episode.findFirst({
+          where: {
+              movieId,
+              slug,
+          },
+      });
+
+      if (existingEpisode) {
+          return new NextResponse("An episode with this slug already exists for this movie", { 
+              status: 400 
+          });
+      }
+
+      const episode = await prisma.episode.create({
+          data: {
+              name,
+              slug,
+              movieId,
+          },
+      });
+
+      return NextResponse.json(episode);
+  } catch (error) {
+      console.error("[EPISODE_POST]", error);
+      return new NextResponse("Internal error", { status: 500 });
   }
 }

@@ -33,7 +33,8 @@ const formSchema = z.object({
   server_name: z.string().min(1, "Server name is required"),
   filename: z.string().optional(),
   link_embed: z.string().url("Must be a valid URL").optional().or(z.literal("")),
-  link_m3u8: z.string().url("Must be a valid URL").optional().or(z.literal(""))
+  link_m3u8: z.string().url("Must be a valid URL").optional().or(z.literal("")),
+  link_mp4: z.string().url("Must be a valid URL").optional().or(z.literal(""))
 });
 
 type ServerFormValues = z.infer<typeof formSchema>;
@@ -61,13 +62,15 @@ const EpisodeServerForm: React.FC<EpisodeServerFormProps> = ({
         server_name: "",
         filename: "",
         link_embed: "",
-        link_m3u8: ""
+        link_m3u8: "",
+        link_mp4: ""
       } 
     : {
         server_name: initialData.server_name,
         filename: initialData.filename || "",
         link_embed: initialData.link_embed || "",
-        link_m3u8: initialData.link_m3u8 || ""
+        link_m3u8: initialData.link_m3u8 || "",
+        link_mp4: initialData.link_mp4 || ""
       };
 
   const form = useForm<ServerFormValues>({
@@ -80,23 +83,23 @@ const EpisodeServerForm: React.FC<EpisodeServerFormProps> = ({
       setIsLoading(true);
         
       console.log("Form data:", data);
-    //   const url = isNew 
-    //     ? `/api/movies/episodes/${movieId}/${episodeId}/new` 
-    //     : `/api/movies/episodes/${movieId}/${episodeId}/${initialData!.id}`;
+      const url = isNew 
+        ? `/api/movies/episodes/${movieId}/${episodeId}` 
+        : `/api/movies/episodes/${movieId}/${episodeId}/${initialData!.id}`;
   
-    //   const axiosConfig = {
-    //     timeout: 10000,
-    //     headers: {
-    //       'Content-Type': 'application/json'
-    //     }
-    //   };
+      const axiosConfig = {
+        timeout: 10000,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      };
   
-    //   const { data: responseData } = isNew 
-    //     ? await axios.post(url, data, axiosConfig)
-    //     : await axios.patch(url, data, axiosConfig);
+      const { data: responseData } = isNew 
+        ? await axios.post(url, data, axiosConfig)
+        : await axios.patch(url, data, axiosConfig);
   
-    //   toast.success(isNew ? 'Server created successfully!' : 'Server updated successfully!');
-    //   onSuccess(responseData);
+      toast.success(isNew ? 'Server created successfully!' : 'Server updated successfully!');
+      onSuccess(responseData);
     } catch (error) {
       if (axios.isAxiosError(error)) {
         if (error.code === 'ECONNABORTED') {
@@ -117,7 +120,7 @@ const EpisodeServerForm: React.FC<EpisodeServerFormProps> = ({
   };
 
   const handleVideoUpload = (url: string) => {
-    form.setValue("link_m3u8", url);
+    form.setValue("link_mp4", url);
   };
 
   return (
@@ -212,6 +215,27 @@ const EpisodeServerForm: React.FC<EpisodeServerFormProps> = ({
                   </FormControl>
                   <FormDescription>
                     Upload a video file or enter a direct URL to an M3U8 playlist
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="link_mp4"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>MP4 Direct URL</FormLabel>
+                  <FormControl>
+                    <Input 
+                      disabled={isLoading}
+                      placeholder="https://example.com/video.mp4" 
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Direct link to MP4 video file
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

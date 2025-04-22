@@ -64,6 +64,8 @@ const EpisodeClient: React.FC<EpisodeClientProps> = ({
   const [isServerMode, setIsServerMode] = useState(false);
   const [deleteServerModalOpen, setDeleteServerModalOpen] = useState(false);
   const [episodeServers, setEpisodeServers] = useState<EpisodeServer[]>(initialData?.servers || []);
+  // Add state for episode deletion
+  const [deleteEpisodeModalOpen, setDeleteEpisodeModalOpen] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
@@ -97,6 +99,40 @@ const EpisodeClient: React.FC<EpisodeClientProps> = ({
     } finally {
       setIsLoading(false);
       setDeleteServerModalOpen(false);
+    }
+  };
+
+  // Add episode delete handler
+  const handleDeleteEpisode = async () => {
+    if (!initialData) return;
+    
+    try {
+      setIsLoading(true);
+
+      await axios.delete(`/api/movies/episodes/${movie.id}/${initialData.id}`, {
+        timeout: 10000
+      });
+
+      toast.success('Episode deleted successfully!');
+      router.push(`/movies/${movie.id}`);
+      router.refresh();
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        if (error.code === 'ECONNABORTED') {
+          toast.error('Request timed out. Please try again.');
+        } else if (error.response) {
+          const errorMsg = error.response.data?.error || 'Failed to delete episode';
+          toast.error(errorMsg);
+        } else {
+          toast.error('Failed to connect to the server');
+        }
+      } else {
+        toast.error('An unexpected error occurred');
+      }
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+      setDeleteEpisodeModalOpen(false);
     }
   };
 
@@ -171,6 +207,34 @@ const EpisodeClient: React.FC<EpisodeClientProps> = ({
         </DialogContent>
       </Dialog>
 
+      {/* Add Delete Episode Confirmation Dialog */}
+      <Dialog open={deleteEpisodeModalOpen} onOpenChange={setDeleteEpisodeModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Episode</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this episode? This will also delete all associated servers and cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteEpisodeModalOpen(false)}
+              disabled={isLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteEpisode}
+              disabled={isLoading}
+            >
+              {isLoading ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="flex items-center justify-between mb-6">
         <Button
           variant="ghost"
@@ -190,6 +254,15 @@ const EpisodeClient: React.FC<EpisodeClientProps> = ({
             >
               <Edit size={16} />
               Edit Episode
+            </Button>
+            {/* Add Delete Episode button */}
+            <Button
+              onClick={() => setDeleteEpisodeModalOpen(true)}
+              variant="destructive"
+              className="gap-1"
+            >
+              <Trash size={16} />
+              Delete Episode
             </Button>
           </div>
         )}

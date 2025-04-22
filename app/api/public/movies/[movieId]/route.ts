@@ -39,7 +39,7 @@ export async function GET(
                         servers: {
                             select: {
                                 id: true, server_name: true, filename: true,
-                                link_embed: true, link_m3u8: true,
+                                link_embed: true, link_m3u8: true, link_mp4: true,
                                 createdAt: true, updatedAt: true,
                             }
                         }
@@ -117,7 +117,7 @@ export async function GET(
                 id: ep.id, name: ep.name, slug: ep.slug,
                 servers: ep.servers.map(s => ({
                     id: s.id, server_name: s.server_name, filename: s.filename ?? "",
-                    link_embed: s.link_embed ?? "", link_m3u8: s.link_m3u8 ?? "",
+                    link_embed: s.link_embed ?? "", link_m3u8: s.link_m3u8 ?? "", link_mp4: s.link_mp4 ?? "",
                     createdAt: s.createdAt.toISOString(), updatedAt: s.updatedAt.toISOString(),
                 }))
             })),

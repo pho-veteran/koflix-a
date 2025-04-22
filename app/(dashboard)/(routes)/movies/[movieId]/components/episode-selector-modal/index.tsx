@@ -137,7 +137,7 @@ export const EpisodeSelectorModal = ({
       setDeletingEpisodeId(episodeId);
 
       // API call to delete the episode
-      await axios.delete(`/api/movies/${movieId}/episodes/${episodeId}`);
+      await axios.delete(`/api/movies/episodes/${movieId}/${episodeId}`);
       
       // Remove the episode from the local state
       setEpisodes(episodes.filter(ep => ep.id !== episodeId));

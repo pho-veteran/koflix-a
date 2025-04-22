@@ -11,7 +11,6 @@ import { format } from "date-fns";
 
 import { 
   Save, 
-  Trash,
   Film
 } from "lucide-react";
 
@@ -27,14 +26,6 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 
 // Define form schema with Zod
 const formSchema = z.object({
@@ -71,7 +62,6 @@ const EpisodeForm: React.FC<EpisodeFormProps> = ({
 }) => {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   
   const action = isNew ? "Create" : "Save changes";
 
@@ -93,7 +83,7 @@ const EpisodeForm: React.FC<EpisodeFormProps> = ({
       setIsLoading(true);
   
       const url = isNew 
-        ? `/api/movies/episodes/${movie.id}/new` 
+        ? `/api/movies/episodes/${movie.id}` 
         : `/api/movies/episodes/${movie.id}/${initialData!.id}`;
   
       const axiosConfig = {
@@ -135,171 +125,98 @@ const EpisodeForm: React.FC<EpisodeFormProps> = ({
     }
   };
 
-  const handleDelete = async () => {
-    try {
-      setIsLoading(true);
-
-      await axios.delete(`/api/movies/episodes/${movie.id}/${initialData!.id}`, {
-        timeout: 10000
-      });
-
-      toast.success('Episode deleted successfully!');
-      router.push(`/movies/${movie.id}`);
-      router.refresh();
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        if (error.code === 'ECONNABORTED') {
-          toast.error('Request timed out. Please try again.');
-        } else if (error.response) {
-          const errorMsg = error.response.data?.error || 'Failed to delete episode';
-          toast.error(errorMsg);
-        } else {
-          toast.error('Failed to connect to the server');
-        }
-      } else {
-        toast.error('An unexpected error occurred');
-      }
-      console.error(error);
-    } finally {
-      setIsLoading(false);
-      setDeleteModalOpen(false);
-    }
-  };
-
   return (
-    <>
-      {/* Delete Episode Confirmation Dialog */}
-      <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Episode</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this episode? This will also delete all associated servers and cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setDeleteModalOpen(false)}
-              disabled={isLoading}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={isLoading}
-            >
-              {isLoading ? "Deleting..." : "Delete"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+    <Form {...form}>
+      <form id="episode-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <Film size={18} className="text-muted-foreground" />
+            Episode Information
+          </h3>
 
-      <Form {...form}>
-        <form id="episode-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-lg font-semibold flex items-center gap-2">
-              <Film size={18} className="text-muted-foreground" />
-              Episode Information
-            </h3>
-
-            {isEditing && (
-              <div className="flex justify-end gap-2">
-                {!isNew && (
-                  <Button
-                    type="button"
-                    onClick={onCancel}
-                    variant="outline"
-                    disabled={isLoading}
-                  >
-                    Cancel
-                  </Button>
-                )}
+          {isEditing && (
+            <div className="flex justify-end gap-2">
+              {!isNew && (
                 <Button
-                  type="submit"
+                  type="button"
+                  onClick={onCancel}
+                  variant="outline"
                   disabled={isLoading}
-                  className="gap-1"
                 >
-                  <Save size={16} />
-                  {isLoading ? "Saving..." : action}
+                  Cancel
                 </Button>
-              </div>
-            )}
-
-            {!isNew && !isEditing && (
+              )}
               <Button
-                onClick={() => setDeleteModalOpen(true)}
-                variant="destructive"
-                size="sm"
+                type="submit"
+                disabled={isLoading}
                 className="gap-1"
               >
-                <Trash size={14} />
-                Delete
+                <Save size={16} />
+                {isLoading ? "Saving..." : action}
               </Button>
-            )}
-          </div>
-
-          <div className="space-y-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Episode Name</FormLabel>
-                  <FormControl>
-                    <Input 
-                      disabled={isLoading || !isEditing} 
-                      placeholder="Enter episode name (e.g. Episode 1)" 
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="slug"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>URL Slug</FormLabel>
-                  <FormControl>
-                    <Input 
-                      disabled={isLoading || !isEditing} 
-                      placeholder="episode-1" 
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          {!isNew && !isEditing && initialData && (
-            <div className="space-y-4 pt-4">
-              <Separator />
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <h4 className="text-sm font-medium text-muted-foreground">Created</h4>
-                  <p>
-                    {format(new Date(initialData.createdAt), "MMMM do, yyyy")}
-                  </p>
-                </div>
-                {initialData.servers.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-medium text-muted-foreground">Available Servers</h4>
-                    <p>{initialData.servers.length}</p>
-                  </div>
-                )}
-              </div>
             </div>
           )}
-        </form>
-      </Form>
-    </>
+        </div>
+
+        <div className="space-y-4">
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Episode Name</FormLabel>
+                <FormControl>
+                  <Input 
+                    disabled={isLoading || !isEditing} 
+                    placeholder="Enter episode name (e.g. Episode 1)" 
+                    {...field} 
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="slug"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>URL Slug</FormLabel>
+                <FormControl>
+                  <Input 
+                    disabled={isLoading || !isEditing} 
+                    placeholder="episode-1" 
+                    {...field} 
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        {!isNew && !isEditing && initialData && (
+          <div className="space-y-4 pt-4">
+            <Separator />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <h4 className="text-sm font-medium text-muted-foreground">Created</h4>
+                <p>
+                  {format(new Date(initialData.createdAt), "MMMM do, yyyy")}
+                </p>
+              </div>
+              {initialData.servers.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground">Available Servers</h4>
+                  <p>{initialData.servers.length}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </form>
+    </Form>
   );
 };
 

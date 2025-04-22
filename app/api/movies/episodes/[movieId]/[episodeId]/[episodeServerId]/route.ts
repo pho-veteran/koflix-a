@@ -8,10 +8,9 @@ export async function POST(
 ) {
     try {
         const body = await req.json();
-        const { movieId, episodeId } = params;
+        const { movieId, episodeId } = await params;
 
-        // Validate request
-        const { server_name, filename, link_embed, link_m3u8 } = body;
+        const { server_name, filename, link_embed, link_m3u8, link_mp4 } = body;
 
         if (!server_name) {
             return new NextResponse("Server name is required", {
@@ -19,7 +18,6 @@ export async function POST(
             });
         }
 
-        // Verify episode exists and belongs to the movie
         const episode = await prisma.episode.findFirst({
             where: {
                 id: episodeId,
@@ -33,7 +31,6 @@ export async function POST(
             });
         }
 
-        // Check if server with same name already exists for this episode
         const existingServer = await prisma.episodeServer.findFirst({
             where: {
                 episodeId,
@@ -47,13 +44,13 @@ export async function POST(
             });
         }
 
-        // Create the server
         const server = await prisma.episodeServer.create({
             data: {
                 server_name,
                 filename: filename || null,
                 link_embed: link_embed || null,
                 link_m3u8: link_m3u8 || null,
+                link_mp4: link_mp4 || null,
                 episodeId,
             },
         });
@@ -72,10 +69,9 @@ export async function PATCH(
 ) {
     try {
         const body = await req.json();
-        const { movieId, episodeId, episodeServerId } = params;
+        const { movieId, episodeId, episodeServerId } = await params;
 
-        // Validate request
-        const { server_name, filename, link_embed, link_m3u8 } = body;
+        const { server_name, filename, link_embed, link_m3u8, link_mp4 } = body;
 
         if (!server_name) {
             return new NextResponse("Server name is required", {
@@ -83,7 +79,6 @@ export async function PATCH(
             });
         }
 
-        // Verify episode exists and belongs to the movie
         const episode = await prisma.episode.findFirst({
             where: {
                 id: episodeId,
@@ -97,7 +92,6 @@ export async function PATCH(
             });
         }
 
-        // Verify server exists and belongs to the episode
         const server = await prisma.episodeServer.findFirst({
             where: {
                 id: episodeServerId,
@@ -111,7 +105,7 @@ export async function PATCH(
             });
         }
 
-        // Check if another server with same name already exists for this episode
+
         const existingServer = await prisma.episodeServer.findFirst({
             where: {
                 episodeId,
@@ -126,7 +120,6 @@ export async function PATCH(
             });
         }
 
-        // Update the server
         const updatedServer = await prisma.episodeServer.update({
             where: { id: episodeServerId },
             data: {
@@ -134,6 +127,7 @@ export async function PATCH(
                 filename: filename || null,
                 link_embed: link_embed || null,
                 link_m3u8: link_m3u8 || null,
+                link_mp4: link_mp4 || null,
             },
         });
 
@@ -150,7 +144,7 @@ export async function DELETE(
     { params }: { params: { movieId: string; episodeId: string; episodeServerId: string } }
 ) {
     try {
-        const { movieId, episodeId, episodeServerId } = params;
+        const { movieId, episodeId, episodeServerId } = await params;
 
         // Verify episode exists and belongs to the movie
         const episode = await prisma.episode.findFirst({
