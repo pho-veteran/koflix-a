@@ -165,7 +165,7 @@ export const MoviesClient = () => {
             handleSelectMovie(movieId, !selectedMovieIds.has(movieId));
         } else {
             // Not in select mode, navigate to edit page
-            router.push(`/dashboard/movies/${movieId}`);
+            router.push(`/movies/${movieId}`);
         }
     };
 
@@ -284,7 +284,7 @@ export const MoviesClient = () => {
         }
     }, [movies.length, isSelectMode]);
 
-    // Check if filters are applied - memoize this too
+    // Check if filters are applied 
     const isFiltered = useMemo(() => {
         return Object.values(filters).some(v =>
             Array.isArray(v) ? v.length > 0 : v !== null && v !== undefined
@@ -293,7 +293,7 @@ export const MoviesClient = () => {
 
     if (!mounted) return null;
 
-    // Create a memoized handleSearchInputChange to prevent unnecessary re-renders
+
     const handleSearchInputChangeOptimized = (value: string) => {
         setSearchInput(value);
     };
