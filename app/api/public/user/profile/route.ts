@@ -63,6 +63,7 @@ export async function POST(request: NextRequest) {
         emailOrPhone: user.emailOrPhone,
         role: user.role,
         avatarUrl: user.avatarUrl,
+        createdAt: user.createdAt,
       },
     });
   } catch (error) {

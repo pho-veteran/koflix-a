@@ -80,13 +80,13 @@ const data = {
             icon: Film,
         },
     ],
-    users_management: [
-        {
-            name: "Users Management",
-            url: "/users-management",
-            icon: Users,
-        }
-    ]
+    // users_management: [
+    //     {
+    //         name: "Users Management",
+    //         url: "/users-management",
+    //         icon: Users,
+    //     }
+    // ]
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -151,7 +151,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarContent>
                 <NavList list={data.kkphim} navTitle="KKPhim" />
                 <NavList list={data.movies} navTitle="Movies" />
-                <NavList list={data.users_management} navTitle="Administration" />
+                {/* <NavList list={data.users_management} navTitle="Administration" /> */}
 
                 <NavSecondary items={data.navSecondary} className="mt-auto" />
             </SidebarContent>
