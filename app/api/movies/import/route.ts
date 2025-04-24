@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { KKMovieImportPayload, KKApiMovie } from '@/types/kkapi';
 import prisma from '@/lib/prisma';
+import { generateEmbedding } from '@/lib/openai';
 
 type KKApiEpisodeItem = {
   name: string;
@@ -46,7 +47,6 @@ async function processBatch<T, R>(
   return results;
 }
 
-// Helper function to process movie and its related entities
 async function processMovie(movie: KKApiMovie) {
   // Find or create genre entries
   const genrePromises = movie.category.map(async (category) => {
@@ -84,6 +84,18 @@ async function processMovie(movie: KKApiMovie) {
     }
   });
   
+  // Generate embedding for movie content
+  let contentEmbedding: number[] = [];
+  if (movie.content && movie.content.trim() !== '') {
+    try {
+      contentEmbedding = await generateEmbedding(movie.content);
+      console.log(`Generated embedding for movie: ${movie.name} (${contentEmbedding.length} dimensions)`);
+    } catch (error) {
+      console.error(`Failed to generate embedding for movie: ${movie.name}`, error);
+      // Continue with import even if embedding generation fails
+    }
+  }
+  
   // Create the movie
   const createdMovie = await prisma.movie.create({
     data: {
@@ -115,6 +127,7 @@ async function processMovie(movie: KKApiMovie) {
       actor: movie.actor || [],
       director: movie.director || [],
       content: movie.content,
+      contentEmbedding: contentEmbedding,
       notify: movie.notify,
       showtimes: movie.showtimes,
     }

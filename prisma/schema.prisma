@@ -102,6 +102,7 @@ model Movie {
   director String[] @default([])
 
   content String
+  contentEmbedding Float[] // OpenAI embeddings
 
   notify    String?
   showtimes String?
