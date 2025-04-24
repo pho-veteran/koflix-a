@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { MovieFrontEndResult } from "@/types/backendType";
+import { performVectorSearch } from "@/lib/atlas-search";
+import { generateEmbedding } from "@/lib/openai";
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
@@ -28,6 +30,7 @@ export async function POST(request: NextRequest) {
         const startYearParam = body.startYear;
         const endYearParam = body.endYear;
         const nameParam = body.name;
+        const contentSearch = body.contentSearch;
         const pageParam = body.page ?? 1;
         const limitParam = body.limit ?? DEFAULT_LIMIT;
 
@@ -40,6 +43,9 @@ export async function POST(request: NextRequest) {
         }
         if (countryId !== undefined && typeof countryId !== 'string') {
              return NextResponse.json({ error: "Invalid 'countryId' parameter. Must be a string." }, { status: 400 });
+        }
+        if (contentSearch !== undefined && typeof contentSearch !== 'string') {
+             return NextResponse.json({ error: "Invalid 'contentSearch' parameter. Must be a string." }, { status: 400 });
         }
 
         let startYear: number | undefined;
@@ -65,21 +71,68 @@ export async function POST(request: NextRequest) {
         if (isNaN(limit) || limit < 1) limit = DEFAULT_LIMIT;
         limit = Math.min(limit, MAX_LIMIT);
 
-        // Construct WHERE Clause
+        // 3. Construct WHERE Clause
         const where: Prisma.MovieWhereInput = {};
+        let vectorSearchIds: string[] | undefined = undefined;
 
+        // --- Vector Search Logic (if contentSearch is provided) ---
+        if (contentSearch && contentSearch.trim() !== '') {
+            try {
+                const queryEmbedding = await generateEmbedding(contentSearch.trim());
+
+                // Fetch a larger set of candidates from vector search, as Prisma will apply further filters.
+                // Adjust these numbers based on performance and desired recall.
+                const vectorLimit = MAX_LIMIT * 5; // Fetch up to 500 candidates initially
+                const vectorNumCandidates = vectorLimit * 10; // Consider 10x candidates for the search
+
+                const vectorSearchResults = await performVectorSearch({
+                    collection: "Movie",
+                    index: "content-vector-index",
+                    path: "contentEmbedding",
+                    queryVector: queryEmbedding,
+                    numCandidates: vectorNumCandidates,
+                    limit: vectorLimit,
+                    project: { _id: 1, score: { "$meta": "vectorSearchScore" } } 
+                });
+
+                vectorSearchIds = vectorSearchResults.map(result => result.id);
+
+                // If vector search returns no IDs, and it was the primary search method, return empty
+                if (vectorSearchIds.length === 0) {
+                    return NextResponse.json({
+                        data: [],
+                        pagination: { currentPage: page, limit: limit, totalPages: 0, totalCount: 0 }
+                    });
+                }
+
+                // Add vector search results to the main WHERE clause
+                // This ensures only movies found by vector search are considered further
+                where.id = { in: vectorSearchIds };
+
+            } catch (error) {
+                 console.error("Vector search or embedding generation failed:", error);
+                 // Depending on requirements, you might want to return an error or fallback
+                 // For now, returning an error:
+                 return NextResponse.json(
+                     { error: "Content search failed", details: error instanceof Error ? error.message : "Unknown error during vector search" },
+                     { status: 500 }
+                 );
+            }
+        }
+        // --- End Vector Search Logic ---
+
+        // --- Add other filters to WHERE clause (combined with vector search IDs if applicable) ---
         if (typeId) {
             where.typeId = typeId;
         }
-
         if (genreIds && genreIds.length > 0) {
+            // Use hasEvery to ensure the movie has ALL specified genres
             where.genreIds = { hasEvery: genreIds };
         }
-
         if (countryId) {
+            // Use has to ensure the movie has the specified country
             where.countryIds = { has: countryId };
         }
-
         if (startYear !== undefined || endYear !== undefined) {
             where.year = {};
             if (startYear !== undefined) {
@@ -89,35 +142,45 @@ export async function POST(request: NextRequest) {
                  where.year.lte = endYear;
             }
         }
-
+        // Add name filter (text search) - this will apply ON TOP of vector search results if contentSearch was used
         if (nameParam && typeof nameParam === 'string' && nameParam.trim() !== '') {
-            where.name = {
-                contains: nameParam.trim(),
-                mode: 'insensitive',
-            };
+             // If 'id' filter is already set (from vector search), Prisma implicitly uses AND
+             where.name = {
+                 contains: nameParam.trim(),
+                 mode: 'insensitive',
+             };
         }
+        // --- End Adding Other Filters ---
 
-        // Execute Database Query
+        // 4. Execute Database Query with Combined Filters
+        // The 'where' object now includes vectorSearchIds (via where.id) if contentSearch was used,
+        // AND all other specified filters.
         const [movies, totalCount] = await prisma.$transaction([
             prisma.movie.findMany({
                 where,
+                // Note: Sorting by vector score isn't directly feasible here when combining with Prisma filters.
+                // The results are primarily filtered by vector search, then by other criteria,
+                // and finally ordered by 'updatedAt'.
+                // For true score-based ranking combined with filters, a direct Atlas Search aggregation pipeline is usually needed.
                 orderBy: { updatedAt: 'desc' },
                 skip: (page - 1) * limit,
                 take: limit,
-                select: {
+                select: { // Select fields needed for the response
                     id: true,
                     name: true,
                     slug: true,
                     poster_url: true,
                     thumb_url: true,
                     year: true,
+                    // Include genres if needed by MovieFrontEndResult
                     genres: { select: { name: true } },
-                    updatedAt: true,
+                    updatedAt: true, // Keep if needed for sorting/display
                 }
             }),
-            prisma.movie.count({ where })
+            prisma.movie.count({ where }) // Count uses the same combined where clause
         ]);
 
+        // 5. Format Results
         const formattedMovies: MovieFrontEndResult[] = movies.map(movie => ({
             id: movie.id,
             name: movie.name,
@@ -125,11 +188,14 @@ export async function POST(request: NextRequest) {
             poster_url: movie.poster_url,
             thumb_url: movie.thumb_url,
             year: movie.year,
-            genres: movie.genres.map(g => g.name),
+            // Map genres if selected and needed
+            genres: movie.genres?.map(g => g.name) ?? [],
+            // score: vectorSearchResults?.find(v => v.id === movie.id)?.score // Optional: Add score if needed, requires fetching scores earlier
         }));
 
         const totalPages = Math.ceil(totalCount / limit);
 
+        // 6. Return Response
         return NextResponse.json({
             data: formattedMovies,
             pagination: {

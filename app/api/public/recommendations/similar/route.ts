@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { MovieFrontEndResult } from "@/types/backendType";
+import { performVectorSearch } from "@/lib/atlas-search";
 
 async function getRelatedMovies(movieId: string, limit: number = 10): Promise<{ related: MovieFrontEndResult[]; strategy: string }> {
     const targetMovie = await prisma.movie.findUnique({
         where: { id: movieId },
         select: {
             id: true,
+            contentEmbedding: true,
             genreIds: true,
             countryIds: true,
         }
@@ -16,44 +18,91 @@ async function getRelatedMovies(movieId: string, limit: number = 10): Promise<{ 
         return { related: [], strategy: 'not_found' };
     }
 
-    // --- Strategy: Feature Matching (Genres/Countries) ---
-    // Find movies that share at least one genre OR one country
-    // Order by a popularity metric (e.g., rating, view count)
-    // We calculate a simple score based on shared features.
+    if (!targetMovie.contentEmbedding || targetMovie.contentEmbedding.length === 0) {
+        console.log(`Movie ${movieId} has no embedding, falling back to feature matching.`);
+        return getRelatedMoviesByFeatures(movieId, targetMovie.genreIds, targetMovie.countryIds, limit);
+    }
 
+    try {
+        const numCandidates = limit * 10;
+
+        const vectorSearchResults = await performVectorSearch({
+            collection: "Movie",
+            index: "content-vector-index",
+            path: "contentEmbedding",
+            queryVector: targetMovie.contentEmbedding,
+            numCandidates: numCandidates,
+            limit: limit,
+            filter: { "_id": { "$ne": { "$oid": movieId } } },
+        });
+
+        if (vectorSearchResults.length > 0) {
+            // MovieFrontEndResult structure
+            const relatedMovies: MovieFrontEndResult[] = vectorSearchResults.map(movie => ({
+                id: movie.id,
+                name: movie.name,
+                slug: movie.slug,
+                poster_url: movie.poster_url,
+                thumb_url: movie.thumb_url,
+                year: movie.year,
+                score: movie.score 
+            }));
+
+            return {
+                related: relatedMovies,
+                strategy: 'vector_search'
+            };
+        }
+
+        // Fallback if vector search returns no results
+        console.log("Vector search returned no results, falling back to feature matching.");
+        return getRelatedMoviesByFeatures(movieId, targetMovie.genreIds, targetMovie.countryIds, limit);
+
+    } catch (error) {
+        console.error("Vector search failed, falling back to feature matching:", error);
+        return getRelatedMoviesByFeatures(movieId, targetMovie.genreIds, targetMovie.countryIds, limit);
+    }
+}
+
+// Original feature matching strategy as fallback
+async function getRelatedMoviesByFeatures(
+    movieId: string,
+    genreIds: string[],
+    countryIds: string[],
+    limit: number
+): Promise<{ related: MovieFrontEndResult[]; strategy: string }> {
     const relatedByFeatures = await prisma.movie.findMany({
         where: {
             AND: [
-                { id: { not: movieId } }, // Exclude the target movie itself
+                { id: { not: movieId } },
                 {
                     OR: [
-                        { genreIds: { hasSome: targetMovie.genreIds } },
-                        { countryIds: { hasSome: targetMovie.countryIds } },
+                        { genreIds: { hasSome: genreIds } },
+                        { countryIds: { hasSome: countryIds } },
                     ]
                 }
             ]
         },
-        // Fetch more than limit initially to allow for scoring/sorting
-        take: limit * 3, // Fetch more candidates to score
+        take: limit * 3, // Fetch more for scoring and slicing
         orderBy: [
-            { rating: 'desc' }, // Prioritize higher rated
-            { view: 'desc' }    // Then by views
+            // Consider relevance-based ordering if possible, or keep existing
+            { rating: 'desc' },
+            { view: 'desc' }
         ],
         select: {
             id: true, name: true, slug: true, poster_url: true, thumb_url: true, year: true,
-            genreIds: true, // Select features needed for scoring
-            countryIds: true
+            genreIds: true, countryIds: true 
         }
     });
 
-    // Calculate a simple match score
+    // Calculate a simple match score based on shared genres/countries
     const scoredMovies = relatedByFeatures.map(movie => {
         let score = 0;
-        const sharedGenres = movie.genreIds.filter(id => targetMovie.genreIds.includes(id)).length;
-        const sharedCountries = movie.countryIds.filter(id => targetMovie.countryIds.includes(id)).length;
+        const sharedGenres = movie.genreIds.filter(id => genreIds.includes(id)).length;
+        const sharedCountries = movie.countryIds.filter(id => countryIds.includes(id)).length;
 
-        // Simple scoring: more shared features = higher score
-        score += sharedGenres * 2; // Weight genres more?
+        // Simple scoring logic (adjust weights as needed)
+        score += sharedGenres * 2; // Weight genres higher
         score += sharedCountries * 1;
 
         return {
@@ -63,9 +112,9 @@ async function getRelatedMovies(movieId: string, limit: number = 10): Promise<{ 
             poster_url: movie.poster_url,
             thumb_url: movie.thumb_url,
             year: movie.year,
-            score: score // Assign calculated score
+            score: score // Use the calculated feature match score
         };
-    }).sort((a, b) => b.score - a.score); // Sort primarily by our match score
+    }).sort((a, b) => b.score - a.score); // Sort by the calculated score
 
     const finalRelated = scoredMovies.slice(0, limit);
 
@@ -74,7 +123,6 @@ async function getRelatedMovies(movieId: string, limit: number = 10): Promise<{ 
         strategy: finalRelated.length > 0 ? 'feature_matching' : 'none'
     };
 }
-
 
 export async function POST(request: NextRequest) {
     try {
@@ -85,7 +133,11 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "movieId (string) is required" }, { status: 400 });
         }
 
-        const { related, strategy } = await getRelatedMovies(movieId);
+        // Add limit parameter if you want to control it from the request
+        const limit = 10;
+        const { related, strategy } = await getRelatedMovies(movieId, limit);
+
+        console.log(`Recommendations for ${movieId}: Found ${related.length}, Strategy: ${strategy}`);
         return NextResponse.json({ data: related, strategy: strategy });
 
     } catch (error: unknown) {
