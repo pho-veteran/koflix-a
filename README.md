@@ -135,4 +135,4 @@ koflix-a/
 
 ## 🔗 Related Projects
 
-- [Koflix-C](../koflix-c) - Mobile client app for Android using React Native Expo
+- [Koflix-C](https://github.com/pho-veteran/koflix-c) - Mobile client app for Android using React Native Expo
