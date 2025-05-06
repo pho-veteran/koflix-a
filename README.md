@@ -78,34 +78,99 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 
 ### Authentication
 
-All API routes except public ones require authentication via Firebase Auth.
+Most API routes under `/api` (excluding those under `/api/public` and specific auth routes) require authentication via Firebase Auth session cookies, typically managed by the frontend after login. Public API routes under `/api/public` often require a Firebase ID token passed in the request body or Authorization header (`Bearer <token>`).
 
 ### Key API Endpoints
 
-#### Movies
-- `GET /api/movies` - List all movies with pagination and filters
-- `GET /api/movies/{id}` - Get movie details
-- `POST /api/movies` - Create a new movie
-- `PATCH /api/movies/{id}` - Update movie
-- `DELETE /api/movies/{id}` - Delete movie
-- `POST /api/movies/import` - Import movies from external source
+#### Admin API (`/api`)
 
-#### Episodes
-- `GET /api/episodes` - List all episodes
-- `GET /api/movies/{movieId}/episodes` - Get episodes for a movie
-- `POST /api/movies/{movieId}/episodes` - Add episode to a movie
-- `PATCH /api/episodes/{id}` - Update episode
-- `DELETE /api/episodes/{id}` - Delete episode
+These routes are generally protected and require admin privileges or a valid user session.
 
-#### Genres
-- `GET /api/genres` - List all genres
-- `POST /api/genres` - Create a new genre
-- `PATCH /api/genres/{id}` - Update genre
-- `DELETE /api/genres/{id}` - Delete genre
+**Authentication (`/api/auth`)**
+*   `POST /api/auth/create-session`: Creates a session cookie after successful Firebase ID token verification.
+*   `POST /api/auth/logout`: Clears the session cookie.
+*   `POST /api/auth/refresh-session`: Verifies and potentially refreshes the session cookie.
 
-#### KKPhim Crawler
-- `POST /api/crawl/kkphim` - Start crawling movies from KKPhim
-- `GET /api/crawl/kkphim/status` - Check crawler status
+**Movies (`/api/movies`)**
+*   `GET /api/movies`: List all movies (admin view, pagination, basic filters).
+*   `POST /api/movies`: Create a new movie.
+*   `GET /api/movies/{movieId}`: Get details for a specific movie (admin view).
+*   `PATCH /api/movies/{movieId}`: Update a specific movie.
+*   `DELETE /api/movies/{movieId}`: Delete a specific movie.
+*   `POST /api/movies/bulk-deletion`: Delete multiple movies by ID.
+*   `POST /api/movies/check-import`: Check which movies (by slug) already exist in the database.
+*   `POST /api/movies/filter`: Advanced filtering and searching for movies (admin view).
+*   `POST /api/movies/import`: Bulk import movies, episodes, and servers from external data (e.g., KKPhim).
+*   `POST /api/movies/update-movies`: Update existing movies based on external data (used by import process).
+
+**Episodes (`/api/movies/episodes`)**
+*   `GET /api/movies/{movieId}/episodes`: Get all episodes for a specific movie.
+*   `POST /api/movies/{movieId}/episodes`: Add a new episode to a movie.
+*   `PATCH /api/movies/episodes/{movieId}/{episodeId}`: Update an episode's details (e.g., name, slug).
+*   `DELETE /api/movies/episodes/{movieId}/{episodeId}`: Delete an episode.
+*   `POST /api/movies/episodes/{movieId}/{episodeId}`: Add a new streaming server to an episode. *(Note: Path seems unusual, might intend to be POST on `/.../servers`)*
+*   `PATCH /api/movies/episodes/{movieId}/{episodeId}/{episodeServerId}`: Update an episode's streaming server.
+*   `DELETE /api/movies/episodes/{movieId}/{episodeId}/{episodeServerId}`: Delete an episode's streaming server.
+
+**Genres (`/api/genres`)**
+*   `GET /api/genres`: List all genres.
+*   `POST /api/genres`: Create a new genre.
+*   `GET /api/genres/{genreId}`: Get details for a specific genre.
+*   `PATCH /api/genres/{genreId}`: Update a specific genre.
+*   `DELETE /api/genres/{genreId}`: Delete a specific genre.
+
+**Countries (`/api/countries`)**
+*   `GET /api/countries`: List all countries.
+*   `POST /api/countries`: Create a new country.
+*   `GET /api/countries/{countryId}`: Get details for a specific country.
+*   `PATCH /api/countries/{countryId}`: Update a specific country.
+*   `DELETE /api/countries/{countryId}`: Delete a specific country.
+
+**Movie Types (`/api/movie-types`)**
+*   `GET /api/movie-types`: List all movie types.
+*   `POST /api/movie-types`: Create a new movie type.
+*   `GET /api/movie-types/{movieTypeId}`: Get details for a specific movie type.
+*   `PATCH /api/movie-types/{movieTypeId}`: Update a specific movie type.
+*   `DELETE /api/movie-types/{movieTypeId}`: Delete a specific movie type.
+
+**Users (`/api/users`)**
+*   `GET /api/users`: Get the current authenticated user's details (admin/dashboard context).
+*   `POST /api/users`: Create or update a user (likely intended for admin actions or specific scenarios).
+
+**Uploads (`/api/uploads`)**
+
+#### Public API (`/api/public`)
+
+These routes are accessible by client applications (like Koflix-C) and may require ID token authentication for user-specific actions.
+
+**Movies & Content**
+*   `GET /api/public/movies/{movieId}`: Get public details for a specific movie, including episodes and servers. Optionally includes user interaction data if authenticated.
+*   `POST /api/public/filter`: Filter and search movies for the public client (supports text search, vector search, genre, type, country, year filters).
+*   `GET /api/public/genres`: Get a list of all genres for public display.
+*   `GET /api/public/countries`: Get a list of all countries for public display.
+*   `GET /api/public/types`: Get a list of all movie types for public display.
+
+**Recommendations**
+*   `POST /api/public/recommendations/recently-added`: Get recently added movies (optional limit).
+*   `GET /api/public/recommendations/recently-added/type/{typeId}`: Get recently added movies filtered by type (optional limit).
+*   `POST /api/public/recommendations/personalized/hybrid-for-you`: Get personalized movie recommendations for the authenticated user.
+*   `POST /api/public/recommendations/personalized/recently-liked`: Get recommendations based on the authenticated user's recently liked movies.
+
+**User Actions (`/api/public/user-movie`)**
+*   `POST /api/public/user-movie/comments`: Create a new comment on a movie (requires ID token).
+*   `GET /api/public/user-movie/comments`: Get comments for a movie with pagination.
+*   `POST /api/public/user-movie/replies`: Create a reply to a comment (requires ID token).
+*   `GET /api/public/user-movie/replies`: Get replies for a comment with pagination.
+*   `POST /api/public/user-movie/interaction`: Record user interactions like LIKE, DISLIKE, RATE (requires ID token).
+*   `POST /api/public/user-movie/view`: Record a movie view (increments view count, requires ID token).
+*   `POST /api/public/user-movie/watch-history`: Create or update a watch history entry for an episode server (requires ID token).
+*   `GET /api/public/user-movie/watch-history`: Get the authenticated user's watch history with pagination (requires ID token).
+*   `POST /api/public/user-movie/watch-history/episode`: Get watch history details for a specific episode (requires ID token).
+
+**User Profile (`/api/public/user`)**
+*   `POST /api/public/user/create-user`: Create or update a user profile in the database based on Firebase authentication (requires ID token).
+*   `POST /api/public/user/get-user`: Get the authenticated user's profile details from the database (requires ID token).
+*   `POST /api/public/user/profile`: Update the authenticated user's profile (e.g., name, avatar) (requires ID token, handles image upload).
 
 ## 📁 Folder Structure Overview
 
