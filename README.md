@@ -1,7 +1,7 @@
 # Koflix-A: Movie Streaming Admin & API Backend
 
 <div align="center">
-  <img src="https://github.com/pho-veteran/koflix-a/public/favicon.png" alt="Koflix Admin Logo" width="150" height="150" />
+  <img src="public/favicon.png" alt="Koflix Admin Logo" width="150" height="150" />
   <h3>Manage your movie streaming platform with ease</h3>
 </div>
 
