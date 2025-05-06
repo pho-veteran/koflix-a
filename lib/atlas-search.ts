@@ -10,10 +10,9 @@ type VectorSearchDocument = Prisma.JsonObject & {
     poster_url: string;
     thumb_url: string;
     year: number;
-    score: number; // This comes from $meta: "vectorSearchScore"
+    score: number;
 };
 
-// Define the structure of the raw MongoDB command result
 interface MongoVectorSearchResult {
     cursor: {
         firstBatch: VectorSearchDocument[];
@@ -21,7 +20,6 @@ interface MongoVectorSearchResult {
     ok: number;
 }
 
-// Define the structure of the final formatted result
 interface FormattedSearchResult {
     id: string;
     name: string;
@@ -39,8 +37,8 @@ interface VectorSearchParams {
     queryVector: number[];
     numCandidates: number;
     limit: number;
-    filter?: Prisma.JsonObject; // Optional filter stage (e.g., to exclude self)
-    project?: Prisma.JsonObject; // Optional projection stage
+    filter?: Prisma.JsonObject;
+    project?: Prisma.JsonObject;
 }
 
 /**
@@ -58,8 +56,8 @@ export async function performVectorSearch(params: VectorSearchParams): Promise<F
         queryVector,
         numCandidates,
         limit,
-        filter, // e.g., { "_id": { "$ne": { "$oid": excludeId } } }
-        project = { // Default projection, includes score
+        filter,
+        project = {
             "_id": 1,
             "name": 1,
             "slug": 1,
@@ -78,20 +76,17 @@ export async function performVectorSearch(params: VectorSearchParams): Promise<F
                 path,
                 queryVector,
                 numCandidates,
-                limit: filter ? (limit * 3) + 1 : limit * 3 // Fetch more if filtering happens after
+                limit: filter ? (limit * 3) + 1 : limit * 3, // Adjust limit for filtering
             }
         }
     ];
 
-    // Add filter stage if provided
     if (filter) {
         pipeline.push({ "$match": filter });
     }
 
-    // Add project stage
     pipeline.push({ "$project": project });
 
-    // Add final limit stage
     pipeline.push({ "$limit": limit });
 
     try {
@@ -101,7 +96,6 @@ export async function performVectorSearch(params: VectorSearchParams): Promise<F
             cursor: {}
         });
 
-        // Cast and validate the result
         const result = rawResult as unknown as MongoVectorSearchResult;
 
         if (result &&
@@ -110,7 +104,6 @@ export async function performVectorSearch(params: VectorSearchParams): Promise<F
             typeof result.cursor === 'object' &&
             Array.isArray(result.cursor.firstBatch)) {
 
-            // Transform the results
             const searchResults = result.cursor.firstBatch
                 .filter((doc): doc is VectorSearchDocument => doc !== null && typeof doc === 'object')
                 .map((doc) => ({
@@ -126,11 +119,11 @@ export async function performVectorSearch(params: VectorSearchParams): Promise<F
             return searchResults;
         } else {
             console.warn("Vector search returned unexpected result structure:", result);
-            return []; // Return empty array if structure is invalid
+            return [];
         }
 
     } catch (error) {
         console.error(`Vector search failed for collection "${collection}", index "${index}":`, error);
-        throw error; // Re-throw the error to be handled by the caller
+        throw error;
     }
 }

@@ -26,8 +26,6 @@ export async function POST(request: Request) {
       Bucket: bucketName,
       Key: uniqueKey,
       ContentType: contentType,
-      // You might want to add ACL or other parameters here depending on your needs
-      // ACL: 'public-read', // Example: if you want the uploaded file to be publicly readable
     });
 
     // Generate the presigned URL for putting the object
@@ -35,7 +33,6 @@ export async function POST(request: Request) {
     const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
 
     // Construct the final URL of the object after upload (optional, but useful)
-    // Ensure your bucket policy and CORS configuration allow access if needed
     const finalUrl = `https://${bucketName}.s3.${process.env.AWS_REGION}.amazonaws.com/${uniqueKey}`;
 
     console.log("Presigned URL generated:", presignedUrl);
