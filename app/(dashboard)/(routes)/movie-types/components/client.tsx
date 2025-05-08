@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react"; // Added useEffect
 import { useRouter } from "next/navigation";
 import { PlusCircle } from "lucide-react";
 
@@ -14,6 +14,7 @@ import { MovieTypeForm } from "./form";
 import { Heading } from "@/components/ui/heading";
 import axios from "axios";
 import toast from "react-hot-toast";
+import { useBreadcrumbs } from "@/providers/breadcrumb-provider";
 
 interface MovieTypesClientProps {
     data: MovieTypeColumn[];
@@ -21,6 +22,15 @@ interface MovieTypesClientProps {
 
 export const MovieTypeClient: React.FC<MovieTypesClientProps> = ({ data }) => {
     const router = useRouter();
+    const { setBreadcrumbs } = useBreadcrumbs();
+
+    // Set breadcrumbs on mount
+    useEffect(() => {
+        setBreadcrumbs([
+            { label: "Dashboard", href: "/dashboard" },
+            { label: "Movie Types" },
+        ]);
+    }, [setBreadcrumbs]);
     
     // Create modal states
     const [open, setOpen] = useState(false);

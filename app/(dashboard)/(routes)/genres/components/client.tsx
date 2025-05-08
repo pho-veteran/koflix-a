@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react"; // Added useEffect
 import { useRouter } from "next/navigation";
 import { PlusCircle } from "lucide-react";
 
@@ -12,6 +12,7 @@ import { ConfirmModal } from "@/components/modals/confirm-modal";
 import { columns, GenreColumn } from "./columns";
 import { GenreForm } from "./form";
 import { Heading } from "@/components/ui/heading";
+import { useBreadcrumbs } from "@/providers/breadcrumb-provider";
 import axios from "axios";
 import toast from "react-hot-toast";
 
@@ -21,6 +22,15 @@ interface GenresClientProps {
 
 export const GenreClient: React.FC<GenresClientProps> = ({ data }) => {
     const router = useRouter();
+    const { setBreadcrumbs } = useBreadcrumbs();
+    
+    // Set breadcrumbs on mount
+    useEffect(() => {
+        setBreadcrumbs([
+            { label: "Dashboard", href: "/dashboard" },
+            { label: "Genres" },
+        ]);
+    }, [setBreadcrumbs]);
     
     // Create modal states
     const [open, setOpen] = useState(false);

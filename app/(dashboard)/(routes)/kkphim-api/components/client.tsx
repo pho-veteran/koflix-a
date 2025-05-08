@@ -7,10 +7,11 @@ import { StatsPanel } from "./stats";
 import { ActionBar } from "./action";
 import { MovieList } from "./movie-list";
 import { ImportModal } from "./import-modal";
-
+import { useBreadcrumbs } from "@/providers/breadcrumb-provider";
 
 export const KKApiClient = () => {
     const [mounted, setMounted] = useState(false);
+    const { setBreadcrumbs } = useBreadcrumbs();
     const [movies, setMovies] = useState<KKApiMovieBase[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -93,7 +94,12 @@ export const KKApiClient = () => {
             fetchMovies(1);
             initialFetchDone.current = true;
         }
-    }, [fetchMovies]);
+        // Set breadcrumbs
+        setBreadcrumbs([
+            { label: "Dashboard", href: "/dashboard" },
+            { label: "KKPhim API" },
+        ]);
+    }, [fetchMovies, setBreadcrumbs]);
 
     useEffect(() => {
         if (mounted && initialFetchDone.current) {

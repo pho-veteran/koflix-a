@@ -6,7 +6,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn, signInWithGoogle } from "@/lib/auth";
-import toast from "react-hot-toast";
 
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
@@ -23,14 +22,7 @@ import {
 import { GoogleIcon } from "@/components/icons/google-icon";
 
 const formSchema = z.object({
-    emailOrPhone: z.string().refine((value) => {
-        const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-        const phonePattern = /^(\+\d{1,3}[- ]?)?\d{10,14}$/;
-
-        return emailPattern.test(value) || phonePattern.test(value);
-    }, {
-        message: "Please enter a valid email address or phone number",
-    }),
+    email: z.string().email("Please enter a valid email address"),
     password: z
     .string()
     .min(8, "Password must be at least 8 characters long")
@@ -55,7 +47,7 @@ const LoginForm: React.FC<LoginFormProps> = () => {
     const form = useForm<LoginFormValues>({
         resolver: zodResolver(formSchema),
         defaultValues: {
-            emailOrPhone: "",
+            email: "",
             password: "",
         },
     });
@@ -63,21 +55,10 @@ const LoginForm: React.FC<LoginFormProps> = () => {
     const handleLogin = async (values: LoginFormValues) => {
         try {
             setIsLoading(true);
-            const { emailOrPhone, password } = values;
-            
-            // Determine if input is email or phone
-            const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-            const isEmail = emailPattern.test(emailOrPhone);
-            
-            if (isEmail) {
-                // Email login
-                const user = await signIn(emailOrPhone, password);
-                if (user) {
-                    router.push(decodeURIComponent(from));
-                }
-            } else {
-                // Phone login is not supported in this form
-                toast.error("Phone login is not supported in this form. Please use email.");
+            const { email, password } = values;
+            const user = await signIn(email, password);
+            if (user) {
+                router.push(decodeURIComponent(from));
             }
         } finally {
             setIsLoading(false);
@@ -109,15 +90,15 @@ const LoginForm: React.FC<LoginFormProps> = () => {
                     <form onSubmit={form.handleSubmit(handleLogin)} className="space-y-4">
                         <FormField
                             control={form.control}
-                            name="emailOrPhone"
+                            name="email"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Email or Phone Number</FormLabel>
+                                    <FormLabel>Email</FormLabel>
                                     <FormControl>
                                         <Input
                                             {...field}
-                                            type="text"
-                                            placeholder="example@email.com or +1234567890"
+                                            type="email"
+                                            placeholder="example@email.com"
                                             disabled={isLoading}
                                         />
                                     </FormControl>

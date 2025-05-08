@@ -13,6 +13,7 @@ import { Trash, Edit2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BulkUpdateModal } from "./bulk-update";
 import { MoviesListPagination } from "./movie-list/movies-list-pagination";
+import { useBreadcrumbs } from "@/providers/breadcrumb-provider";
 
 type MovieFilters = {
     typeId: string | null;
@@ -26,6 +27,7 @@ type MovieFilters = {
 
 export const MoviesClient = () => {
     const router = useRouter();
+    const { setBreadcrumbs } = useBreadcrumbs();
     const [mounted, setMounted] = useState(false);
     const [movies, setMovies] = useState<MovieResult[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -121,7 +123,13 @@ export const MoviesClient = () => {
         setMounted(true);
         fetchMovies(1);
         initialFetchDone.current = true;
-    }, [fetchMovies]);
+
+        // Set breadcrumbs
+        setBreadcrumbs([
+            { label: "Dashboard", href: "/dashboard" },
+            { label: "Movies" },
+        ]);
+    }, [fetchMovies, setBreadcrumbs]);
 
     // Apply filters
     useEffect(() => {

@@ -14,9 +14,12 @@ import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { useSidebar } from "@/components/ui/sidebar"
 import { ModeToggle } from "./ui/theme-toggle"
+import { useBreadcrumbs } from "@/providers/breadcrumb-provider"
+import { Fragment } from "react"
 
 export function SiteHeader() {
     const { toggleSidebar } = useSidebar()
+    const { breadcrumbs } = useBreadcrumbs()
 
     return (
         <header className="bg-background sticky top-0 z-50 flex w-full items-center border-b">
@@ -31,19 +34,28 @@ export function SiteHeader() {
                         <SidebarIcon />
                     </Button>
                     <Separator orientation="vertical" className="mr-2 h-4" />
-                    {/* <Breadcrumb className="hidden sm:block">
-                        <BreadcrumbList>
-                            <BreadcrumbItem>
-                                <BreadcrumbLink href="#">
-                                    Breadcrumb 1
-                                </BreadcrumbLink>
-                            </BreadcrumbItem>
-                            <BreadcrumbSeparator />
-                            <BreadcrumbItem>
-                                <BreadcrumbPage>Breadcrumb 2</BreadcrumbPage>
-                            </BreadcrumbItem>
-                        </BreadcrumbList>
-                    </Breadcrumb> */}
+                    {breadcrumbs.length > 0 && (
+                        <Breadcrumb className="hidden sm:block">
+                            <BreadcrumbList>
+                                {breadcrumbs.map((item, index) => (
+                                    <Fragment key={index}>
+                                        <BreadcrumbItem>
+                                            {index === breadcrumbs.length - 1 ? (
+                                                <BreadcrumbPage>{item.label}</BreadcrumbPage>
+                                            ) : (
+                                                <BreadcrumbLink href={item.href || "#"}>
+                                                    {item.label}
+                                                </BreadcrumbLink>
+                                            )}
+                                        </BreadcrumbItem>
+                                        {index < breadcrumbs.length - 1 && (
+                                            <BreadcrumbSeparator />
+                                        )}
+                                    </Fragment>
+                                ))}
+                            </BreadcrumbList>
+                        </Breadcrumb>
+                    )}
                 </div>
                 <ModeToggle />
             </div>

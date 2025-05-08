@@ -4,6 +4,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeProvider } from "@/providers/theme-provider";
+import { BreadcrumbProvider } from "@/providers/breadcrumb-provider";
 import prisma from "@/lib/prisma";
 
 export const iframeHeight = "800px"
@@ -43,15 +44,17 @@ export default async function DashboardLayout({
                     enableSystem
                     disableTransitionOnChange
                 >
-                    <SidebarProvider className="flex flex-col">
-                        <SiteHeader />
-                        <div className="flex flex-1">
-                            <AppSidebar />
-                            <SidebarInset>
-                                {children}
-                            </SidebarInset>
-                        </div>
-                    </SidebarProvider>
+                    <BreadcrumbProvider>
+                        <SidebarProvider className="flex flex-col">
+                            <SiteHeader />
+                            <div className="flex flex-1">
+                                <AppSidebar />
+                                <SidebarInset>
+                                    {children}
+                                </SidebarInset>
+                            </div>
+                        </SidebarProvider>
+                    </BreadcrumbProvider>
                 </ThemeProvider>
             </div>
         </>

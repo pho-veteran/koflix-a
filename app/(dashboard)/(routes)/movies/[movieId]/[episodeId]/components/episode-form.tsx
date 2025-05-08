@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { useBreadcrumbs } from "@/providers/breadcrumb-provider"; // Added import
 
 // Define form schema with Zod
 const formSchema = z.object({
@@ -62,8 +63,20 @@ const EpisodeForm: React.FC<EpisodeFormProps> = ({
 }) => {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const { setBreadcrumbs } = useBreadcrumbs(); // Added useBreadcrumbs
   
   const action = isNew ? "Create" : "Save changes";
+
+  // Set breadcrumbs
+  useEffect(() => {
+    const episodeName = initialData?.name || "New Episode";
+    setBreadcrumbs([
+      { label: "Dashboard", href: "/dashboard" },
+      { label: "Movies", href: "/movies" },
+      { label: movie.name, href: `/movies/${movie.id}` },
+      { label: episodeName },
+    ]);
+  }, [initialData, movie, setBreadcrumbs, isNew]);
 
   const defaultValues = isNew ? {
     name: "",

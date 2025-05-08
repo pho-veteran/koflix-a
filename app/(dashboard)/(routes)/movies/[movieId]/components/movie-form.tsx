@@ -50,6 +50,7 @@ import {
 import toast from "react-hot-toast";
 import ImageUpload from "@/components/ui/image-upload";
 import { EpisodeSelectorModal } from "./episode-selector-modal";
+import { useBreadcrumbs } from "@/providers/breadcrumb-provider";
 
 // Use Prisma types directly instead of redefining them
 type MovieWithRelations = Movie & {
@@ -105,6 +106,7 @@ const MovieForm: React.FC<MovieFormProps> = ({
   isNew
 }) => {
   const router = useRouter();
+  const { setBreadcrumbs } = useBreadcrumbs();
   const [isLoading, setIsLoading] = useState(false);
   const [editMode, setEditMode] = useState(isNew);
   const [isMounted, setIsMounted] = useState(false);
@@ -114,6 +116,16 @@ const MovieForm: React.FC<MovieFormProps> = ({
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  // Set breadcrumbs on mount and when initialData or isNew changes
+  useEffect(() => {
+    const movieName = initialData?.name || (isNew ? "New Movie" : "Movie Details");
+    setBreadcrumbs([
+      { label: "Dashboard", href: "/dashboard" },
+      { label: "Movies", href: "/movies" },
+      { label: movieName },
+    ]);
+  }, [initialData, isNew, setBreadcrumbs]);
 
   const action = isNew ? "Create" : "Save changes";
 

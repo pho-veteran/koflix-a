@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react"; // Added useEffect
 import { useRouter } from "next/navigation";
 import { PlusCircle } from "lucide-react";
 
@@ -12,6 +12,7 @@ import { ConfirmModal } from "@/components/modals/confirm-modal";
 import { columns, CountryColumn } from "./columns";
 import { CountryForm } from "./form";
 import { Heading } from "@/components/ui/heading";
+import { useBreadcrumbs } from "@/providers/breadcrumb-provider";
 import axios from "axios";
 import toast from "react-hot-toast";
 
@@ -21,6 +22,15 @@ interface CountriesClientProps {
 
 export const CountryClient: React.FC<CountriesClientProps> = ({ data }) => {
     const router = useRouter();
+    const { setBreadcrumbs } = useBreadcrumbs();
+
+    // Set breadcrumbs on mount
+    useEffect(() => {
+        setBreadcrumbs([
+            { label: "Dashboard", href: "/dashboard" },
+            { label: "Countries" },
+        ]);
+    }, [setBreadcrumbs]);
     
     // Create modal states
     const [open, setOpen] = useState(false);
