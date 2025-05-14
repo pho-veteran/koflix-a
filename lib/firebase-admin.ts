@@ -1,8 +1,18 @@
 import { initializeApp, getApps, cert, ServiceAccount } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
-import serviceAccountData from "@/lib/firebase-admin/service-account.json";
 
-const serviceAccount = serviceAccountData as ServiceAccount;
+function getServiceAccountFromEnv(): ServiceAccount {
+    const base64 = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
+    if (!base64) {
+        throw new Error("FIREBASE_SERVICE_ACCOUNT_BASE64 env variable is not set");
+    }
+    try {
+        const json = Buffer.from(base64, 'base64').toString('utf8');
+        return JSON.parse(json) as ServiceAccount;
+    } catch (error) {
+        throw new Error("Failed to parse service account from env: " + error);
+    }
+}
 
 /**
  * Initialize Firebase Admin SDK
@@ -12,7 +22,7 @@ export function initAdmin() {
     if (getApps().length === 0) {
         try {
             initializeApp({
-                credential: cert(serviceAccount),
+                credential: cert(getServiceAccountFromEnv()),
             });
         } catch (error) {
             console.error("Error initializing Firebase Admin:", error);
