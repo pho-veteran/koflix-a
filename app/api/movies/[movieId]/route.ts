@@ -5,7 +5,7 @@ import { verifySessionCookie } from "@/lib/server-auth";
 // Get a specific movie by ID
 export async function GET(
   req: Request,
-  { params }: { params: { movieId: string } }
+  { params }: { params: Promise<{ movieId: string }> }
 ) {
   try {
     // Verify authentication
@@ -52,7 +52,7 @@ export async function GET(
 // Update a movie
 export async function PATCH(
   req: Request,
-  { params }: { params: { movieId: string } }
+  { params }: { params: Promise<{ movieId: string }> }
 ) {
   try {
     // Verify authentication
@@ -122,7 +122,7 @@ export async function PATCH(
 // Delete a movie
 export async function DELETE(
   req: Request,
-  { params }: { params: { movieId: string } }
+  { params }: { params: Promise<{ movieId: string }> }
 ) {
   try {
     // Verify authentication

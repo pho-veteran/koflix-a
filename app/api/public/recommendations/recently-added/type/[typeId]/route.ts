@@ -73,7 +73,7 @@ async function getRecentlyAddedMoviesByType(
 
 export async function GET(
     request: NextRequest,
-    { params }: { params: { typeId: string } }
+    { params }: { params: Promise<{ typeId: string }> }
 ) {
     try {
         const { typeId } = await params;

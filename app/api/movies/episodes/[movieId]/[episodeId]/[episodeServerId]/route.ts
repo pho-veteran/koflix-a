@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 // Create new episode server
 export async function POST(
     req: Request,
-    { params }: { params: { movieId: string; episodeId: string; episodeServerId: string } }
+    { params }: { params: Promise<{ movieId: string; episodeId: string; episodeServerId: string }> }
 ) {
     try {
         const body = await req.json();
@@ -65,7 +65,7 @@ export async function POST(
 // Update episode server
 export async function PATCH(
     req: Request,
-    { params }: { params: { movieId: string; episodeId: string; episodeServerId: string } }
+    { params }: { params: Promise<{ movieId: string; episodeId: string; episodeServerId: string }> }
 ) {
     try {
         const body = await req.json();
@@ -141,7 +141,7 @@ export async function PATCH(
 // Delete episode server
 export async function DELETE(
     req: Request,
-    { params }: { params: { movieId: string; episodeId: string; episodeServerId: string } }
+    { params }: { params: Promise<{ movieId: string; episodeId: string; episodeServerId: string }> }
 ) {
     try {
         const { movieId, episodeId, episodeServerId } = await params;

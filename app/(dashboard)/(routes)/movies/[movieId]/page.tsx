@@ -4,9 +4,9 @@ import prisma from "@/lib/prisma";
 import MovieForm from "./components/movie-form";
 
 interface MoviePageProps {
-  params: {
+  params: Promise<{
     movieId: string;
-  };
+  }>;
 }
 
 const MoviePage = async ({ params }: MoviePageProps) => {

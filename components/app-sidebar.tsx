@@ -9,7 +9,6 @@ import {
     Film,
     Globe,
     Tags,
-    Users,
     FileVideo2
 } from "lucide-react"
 import { useState, useEffect } from "react"

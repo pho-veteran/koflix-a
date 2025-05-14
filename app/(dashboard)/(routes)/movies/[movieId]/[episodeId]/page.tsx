@@ -2,13 +2,13 @@ import { notFound } from "next/navigation";
 import { ObjectId } from "mongodb";
 import prisma from "@/lib/prisma";
 import EpisodeClient from "./components/client";
-import { Movie } from "@prisma/client"; // Add this import
+import { Movie } from "@prisma/client";
 
 interface EpisodePageProps {
-  params: {
+  params: Promise<{
     movieId: string;
     episodeId: string;
-  };
+  }>;
 }
 
 const EpisodePage = async ({ params }: EpisodePageProps) => {

@@ -72,7 +72,7 @@ async function getRecentlyAddedMoviesByGenre(
 
 export async function GET(
     request: NextRequest,
-    { params }: { params: { genreId: string } }
+    { params }: { params: Promise<{ genreId: string }> }
 ) {
     try {
         const { genreId } = await params;

@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 export async function PATCH(
     req: Request,
-    { params }: { params: { genreId: string } }
+    { params }: { params: Promise<{ genreId: string }> }
 ) {
     try {
         const body = await req.json();
@@ -54,7 +54,7 @@ export async function PATCH(
 
 export async function DELETE(
     req: Request,
-    { params }: { params: { genreId: string } }
+    { params }: { params: Promise<{ genreId: string }> }
 ) {
     try {
         const { genreId } = await params;
@@ -101,7 +101,7 @@ export async function DELETE(
 
 export async function GET(
     req: Request,
-    { params }: { params: { genreId: string } }
+    { params }: { params: Promise<{ genreId: string }> }
 ) {
     try {
         const { genreId } = await params; // Await params

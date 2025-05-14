@@ -84,7 +84,7 @@ export const EpisodeSelectorModal = ({
     if (isOpen && movieId) {
       fetchEpisodes();
     }
-  }, [isOpen, movieId]);
+  });
 
   const fetchEpisodes = async () => {
     try {

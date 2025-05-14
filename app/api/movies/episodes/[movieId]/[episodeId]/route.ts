@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 // Update episode
 export async function PATCH(
     req: Request,
-    { params }: { params: { movieId: string; episodeId: string } }
+    { params }: { params: Promise<{ movieId: string; episodeId: string }> }
 ) {
     try {
         const body = await req.json();
@@ -70,7 +70,7 @@ export async function PATCH(
 // Delete episode
 export async function DELETE(
     req: Request,
-    { params }: { params: { movieId: string; episodeId: string } }
+    { params }: { params: Promise<{ movieId: string; episodeId: string }> }
 ) {
     try {
         const { movieId, episodeId } = await params;
@@ -106,7 +106,7 @@ export async function DELETE(
 
 export async function POST(
     req: Request,
-    { params }: { params: { movieId: string; episodeId: string } }
+    { params }: { params: Promise<{ movieId: string; episodeId: string }> }
 ) {
     try {
         const body = await req.json();

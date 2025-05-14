@@ -10,7 +10,7 @@ interface UserInteractionData {
 
 export async function GET(
     request: NextRequest,
-    { params }: { params: { movieId: string } }
+    { params }: { params: Promise<{ movieId: string }> }
 ) {
     try {
         const { movieId } = await params;

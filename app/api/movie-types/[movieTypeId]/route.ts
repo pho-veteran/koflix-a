@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 export async function PATCH(
     req: Request,
-    { params }: { params: { movieTypeId: string } }
+    { params }: { params: Promise<{ movieTypeId: string }> }
 ) {
     try {
         const body = await req.json();
@@ -54,7 +54,7 @@ export async function PATCH(
 
 export async function DELETE(
     req: Request,
-    { params }: { params: { movieTypeId: string } }
+    { params }: { params: Promise<{ movieTypeId: string }> }
 ) {
     try {
         const { movieTypeId } = await params;
@@ -101,10 +101,10 @@ export async function DELETE(
 
 export async function GET(
     req: Request,
-    { params }: { params: { movieTypeId: string } }
+    { params }: { params: Promise<{ movieTypeId: string }> }
 ) {
     try {
-        const { movieTypeId } = await params; // Await params
+        const { movieTypeId } = await params;
 
         if (!movieTypeId) {
             return new NextResponse("Movie Type ID is required", { status: 400 });
