@@ -74,6 +74,24 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 
 > **Note:** For environment variables, refer to `.env.example` file in the project root and create your own `.env` file based on it.
 
+### 🔑 Encoding Firebase Service Account for Environment Variable
+
+If your deployment platform requires the Firebase service account as a base64-encoded string (e.g., for `FIREBASE_SERVICE_ACCOUNT_BASE64`), you can generate it using the provided script:
+
+```bash
+npx tsx scripts/encode-service-account.ts
+```
+
+This will output a line like:
+
+```
+FIREBASE_SERVICE_ACCOUNT_BASE64=eyJ0eXAiOiJKV1QiLCJhbGciOi...
+```
+
+Copy the output and add it to your `.env` file.
+
+> **Note:** Make sure your `service-account.json` file is located in the `scripts/` directory before running the script.
+
 ## 📚 API Documentation
 
 ### Authentication
